@@ -1,23 +1,29 @@
 import React, { Component } from "react";
 import {
   BrowserRouter as Router,
-  Route,
+  Route, Switch,
   Link,
   RouteComponentProps,
   match
 } from "react-router-dom";
 import "./App.css";
 import Login from "./Login";
+import Register from "./Register";
 
 function App() {
   return (
     <Router>
       <div>
         <Header />
+        <Switch>
+          <Route exact path="/" component={Home} />
+          <Route path="/login" component={Login} />
+          <Route path="/register" component={Register} />
+          <Route path="/topics" component={Topics} />
+          <Route component={NoMatch} />
+        </Switch>
 
-        <Route exact path="/" component={Home} />
-        <Route path="/login" component={Login} />
-        <Route path="/topics" component={Topics} />
+
       </div>
     </Router>
   );
@@ -55,6 +61,16 @@ function Topics({ match }: RouteComponentProps<{ id: string }>) {
   );
 }
 
+function NoMatch(props: any) {
+  return (
+    <div>
+      <h3>
+        No match for <code>{props.location.pathname}</code>
+      </h3>
+    </div>
+  );
+}
+
 function Header() {
   return (
     <ul>
@@ -63,6 +79,9 @@ function Header() {
       </li>
       <li>
         <Link to="/login">Вход</Link>
+      </li>
+      <li>
+        <Link to="/register">Регистрация</Link>
       </li>
       <li>
         <Link to="/topics">Topics</Link>

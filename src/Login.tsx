@@ -1,30 +1,24 @@
 import React from "react";
 import * as AppKey from "./AppKey";
-import {Button, Form, Col, Alert, Card} from 'react-bootstrap';
-
+import { Button, Form, Spinner, Row, Alert, Card, FormGroup, FormLabel } from 'react-bootstrap';
+import { jsonrpc2 } from "./Api"
+import { Link, Redirect } from "react-router-dom";
 
 interface State {
     name: string;
     pass: string;
     request: boolean;
     error?: string
-}
-
-function getFromLocalStorage(key: string): string {
-    let v = localStorage.getItem(key);
-    if (v) {
-        return v;
-    }
-    return "";
+    redirectTo?: string,
 }
 
 export default class Login extends React.Component<{}, State> {
     constructor(props: {}) {
         super(props);
         this.state = {
-            name: getFromLocalStorage(AppKey.username),
-            pass: getFromLocalStorage(AppKey.password),
-            request: false
+            name: "",
+            pass: "",
+            request: false,
         };
         this.handleClick = this.handleClick.bind(this);
         this.handleInputName = this.handleInputName.bind(this);
@@ -32,135 +26,98 @@ export default class Login extends React.Component<{}, State> {
     }
 
     handleInputName(evt: any) {
-        this.setState({name: evt.target.value});
+        this.setState({ name: evt.target.value });
     }
 
     handleInputPassword(evt: any) {
-        this.setState({pass: evt.target.value});
+        this.setState({ pass: evt.target.value });
     }
 
-    handleClick() {
-        const request = JSON.stringify({
-            jsonrpc: "2.0",
-            method: "Auth.Login",
-            params: {name: this.state.name, pass: this.state.pass},
-            id: 0
+    setError(error: string) {
+        this.setState({
+            request: false,
+            error: error,
         });
+    }
 
-        this.setState({request: true});
+    async handleClick() {
 
-        fetch("http://localhost:3001/rpc", {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: request
-        })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                }
+        this.setState({ request: true });
 
-                throw new Error(`${response.status}: ${response.statusText}`);
-            })
-            .then(response => {
-                if (typeof response.result === "string") {
-                    localStorage.setItem(AppKey.username, this.state.name);
-                    localStorage.setItem(AppKey.password, this.state.pass);
-                    localStorage.setItem(AppKey.token, response.result);
-                    window.location.href = "/profile";
-                    return;
-                }
-                if (typeof response.error.message === "string") {
-                    this.setState({error: response.error.message, request: false});
-                    return;
-                }
-                if (typeof response.error === "string") {
-                    throw new Error(response.error);
-                }
-
-                throw new Error(JSON.stringify(response));
-            })
-            .catch(error => {
+        try {
+            let response = await jsonrpc2("Auth.Login", { name: this.state.name, pass: this.state.pass });
+            if (response.kind === "ok") {
+                localStorage.setItem(AppKey.token, response.result);
                 this.setState({
-                    request: false,
-                    error: "Что-то пошло не так. Подробности в консоли браузера."
+                    redirectTo: "/profile",
                 });
-                console.log(error);
-            });
+                return;
+            }
+            this.setError(response.error.message);
+        } catch (exn) {
+            this.setError("Что-то пошло не так. Подробности в консоли браузера.");
+        }
     }
 
     render() {
+        if (this.state.redirectTo) {
+            return <Redirect to={this.state.redirectTo} />
+        }
         return (
-            <main>
-                <Card>
-                    <Card.Header>
-                        Вход
-                    </Card.Header>
-                    <Card.Body>
-                        <Form>
-                            <Form.Row>
-                                <Col>
-                                    <Form.Label>Имя или email</Form.Label>
-                                </Col>
-                                <Col>
-                                    <Form.Label>Пароль</Form.Label>
-                                </Col>
+            <main >
+                <div >
 
-                                <Col>
+                    <Form style={{
+                        margin: "0 auto",
+                        width: "50%",
+                        maxWidth: "400px",
+                        border: "3px solid lightsteelblue",
+                        background: "lightcyan",
+                        borderRadius: "15px",
+                        padding: "40px 40px 20px 40px",
+                    }}>
+                        <Form.Group as={Row} >
+                            <FormLabel>Имя или email</FormLabel>
+                            <Form.Control type="input" placeholder="Имя пользователя или email"
+                                onChange={this.handleInputName} />
+                        </Form.Group>
 
-                                </Col>
+                        <Form.Group as={Row} >
+                            <FormLabel>Пароль</FormLabel>
+                            <Form.Control type="password" placeholder="Пароль"
+                                onChange={this.handleInputPassword} />
+                        </Form.Group>
 
+                        <Button variant="primary" type="submit"
+                            className="float-right" onClick={this.handleClick}
+                            disabled={this.state.request}>
+                            Вход
+                            {this.state.request ?
+                                <Spinner
+                                    as="span"
+                                    animation="grow"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                /> : null}
+                        </Button>
+                        <Link to="/register" >
+                            Ещё не зарегестрированы?
+                        </Link>
 
-                            </Form.Row>
+                        {!this.state.request && this.state.error ?
+                            (
+                                <Alert variant='danger' style={{ marginTop: "15px" }}>
+                                    {this.state.error}
+                                </Alert>
+                            ) : null
+                        }
 
+                    </Form>
 
-                            <Form.Row>
-                                <Col>
-                                    <Form.Control type="email" placeholder="Имя пользователя или email"
-                                                  onChange={this.handleInputName}/>
-                                </Col>
-                                <Col>
-                                    <Form.Control type="password" placeholder="Пароль"
-                                                  onChange={this.handleInputPassword}/>
-                                </Col>
-
-                                <Col>
-                                    <Button variant="primary" type="submit" onClick={this.handleClick}
-                                            disabled={this.state.request}>
-                                        Вход
-                                    </Button>
-                                </Col>
-
-                            </Form.Row>
-
-                            <Form.Row>
-                                <Col>
-                                    <Button variant="link">
-
-                                        Уже зарегестрированы?
-                                    </Button>
-
-                                </Col>
-
-                            </Form.Row>
-
-
-                        </Form>
+                </div>
 
 
-                    </Card.Body>
-
-                </Card>
-
-                {this.state.error ?
-                    (
-                        <Alert variant='danger'>
-                            {this.state.error}
-                        </Alert>
-                    ) : null
-                }
 
 
             </main>

@@ -1,7 +1,7 @@
 import React from "react";
 import * as AppKey from "./AppKey";
 import {
-    Button, Form, Spinner, Row, Alert, Card, FormGroup, FormLabel, FormControl, Jumbotron, Container
+    Button, Form, Spinner, Row, Alert, Card, FormGroup, FormLabel, Modal, Jumbotron, Container
 } from 'react-bootstrap';
 import { jsonrpc2 } from "./Api"
 import { Link, Redirect } from "react-router-dom";
@@ -15,6 +15,8 @@ interface State {
         email: string;
     } | {
         kind: "initializing";
+    } | {
+        kind: "redirect";
     } | {
         kind: "error";
         error: string;
@@ -46,15 +48,14 @@ export default class Profile extends React.Component<{}, State> {
             }
             this.setState({
                 payload: {
-                    kind: "error",
-                    error: response.error.message,
+                    kind: "redirect",
                 },
             });
         } catch (exn) {
             this.setState({
                 payload: {
                     kind: "error",
-                    error: "Подробности в консоли браузера.",
+                    error: exn.text,
                 },
             });
         }
@@ -63,10 +64,40 @@ export default class Profile extends React.Component<{}, State> {
 
 
     render() {
+
+        if (this.state.payload.kind === "redirect") {
+            return <Redirect to="/login" />
+        }
+
+
         if (this.state.payload.kind === "initializing") {
-            return (<main>
-                <Spinner animation="border" />
-            </main>);
+            return (
+                <Jumbotron>
+                    <Container>
+                        <Modal
+                            size="sm"
+                            aria-labelledby="contained-modal-title-vcenter"
+                            centered
+                            show={true}
+                            onHide={function () {}}
+                        >
+                            <Modal.Body>
+                                <Spinner animation="border" style={{marginRight:"20px"}} />
+                                <span style={{
+                                    marginLeft:"20px",
+                                    fontSize:"xx-large",
+                                }}>Загрузка</span>
+                            </Modal.Body>
+                        </Modal>
+                        <h2>Личный кабинет</h2>
+                    </Container>
+                </Jumbotron>
+
+
+
+
+
+            );
         }
 
         if (this.state.payload.kind === "error") {

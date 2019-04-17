@@ -14,6 +14,7 @@ import Profile from "./Profile";
 import {Container, Jumbotron} from "react-bootstrap";
 
 function App() {
+    console.log(process.env);
     return (
         <Router>
             <div>

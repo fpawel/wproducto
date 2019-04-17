@@ -28,7 +28,11 @@ async function doJsonrpc2(method: string, params: any): Promise<{
         id: `method=${method} params=${JSON.stringify(params)}`
     });
 
-    let response = await fetch("http://localhost:3001/rpc", {
+    let url = process.env.REACT_APP_API_URL;
+    if (!url)
+        url = '';
+    url += '/rpc';
+    let response = await fetch(url, {
         method: "POST",
         headers: {
             Accept: "application/json",
@@ -57,10 +61,6 @@ async function doJsonrpc2(method: string, params: any): Promise<{
     }
     throw new Error(`не удалось распарсить ответ от сервера: ${JSON.stringify(data)}`);
 }
-
-
-
-
 
 
 function isRpcError(item: any): item is error {

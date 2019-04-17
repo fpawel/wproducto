@@ -8,7 +8,7 @@ interface State {
     name: string;
     pass: string;
     request: boolean;
-    error?: string
+    error?: string,
     redirectTo?: string,
 }
 
@@ -60,6 +60,7 @@ export default class Login extends React.Component<{}, State> {
     }
 
     render() {
+
         if (this.state.redirectTo) {
             return <Redirect to={this.state.redirectTo} />
         }

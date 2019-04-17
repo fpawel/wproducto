@@ -1,8 +1,9 @@
 import React from "react";
 import * as AppKey from "./AppKey";
-import { Button, Form, Spinner, Row, Alert, Card, FormGroup, FormLabel } from 'react-bootstrap';
+import {Button, Form, Spinner, Row, Alert, Card, FormGroup, FormLabel, Modal} from 'react-bootstrap';
 import { jsonrpc2 } from "./Api"
 import { Link, Redirect } from "react-router-dom";
+import ModalInfo from "./components/ModalInfo"
 
 interface State {
     name: string;
@@ -66,6 +67,8 @@ export default class Login extends React.Component<{}, State> {
         }
         return (
             <main >
+                {ModalInfo('Выполняется', this.state.request)};
+
                 <div >
 
                     <Form style={{
@@ -80,12 +83,14 @@ export default class Login extends React.Component<{}, State> {
                         <Form.Group as={Row} >
                             <FormLabel>Имя или email</FormLabel>
                             <Form.Control type="input" placeholder="Имя пользователя или email"
+                                          value={this.state.name}
                                 onChange={this.handleInputName} />
                         </Form.Group>
 
                         <Form.Group as={Row} >
                             <FormLabel>Пароль</FormLabel>
                             <Form.Control type="password" placeholder="Пароль"
+                                          value={this.state.pass}
                                 onChange={this.handleInputPassword} />
                         </Form.Group>
 

@@ -5,6 +5,7 @@ import {
 } from 'react-bootstrap';
 import { jsonrpc2 } from "./Api"
 import { Link, Redirect } from "react-router-dom";
+import ModalInfo from "./components/ModalInfo"
 
 interface State {
     name: string;
@@ -88,6 +89,7 @@ export default class Register extends React.Component<{}, State> {
         return (
 
             <main >
+                {ModalInfo('Выполняется', this.state.request)};
                 <div>
 
                     <Form style={{

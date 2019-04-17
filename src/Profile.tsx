@@ -5,7 +5,7 @@ import {
 } from 'react-bootstrap';
 import { jsonrpc2 } from "./Api"
 import { Link, Redirect } from "react-router-dom";
-
+import ModalInfo from "./components/ModalInfo"
 
 
 interface State {
@@ -31,6 +31,7 @@ export default class Profile extends React.Component<{}, State> {
                 kind: "initializing",
             },
         };
+        this.logout = this.logout.bind(this);
     }
 
     async componentDidMount() {
@@ -62,6 +63,14 @@ export default class Profile extends React.Component<{}, State> {
 
     }
 
+    logout(){
+        localStorage.removeItem(AppKey.token);
+        this.setState({
+            payload: {
+                kind: "redirect",
+            },
+        });
+    }
 
     render() {
 
@@ -71,33 +80,7 @@ export default class Profile extends React.Component<{}, State> {
 
 
         if (this.state.payload.kind === "initializing") {
-            return (
-                <Jumbotron>
-                    <Container>
-                        <Modal
-                            size="sm"
-                            aria-labelledby="contained-modal-title-vcenter"
-                            centered
-                            show={true}
-                            onHide={function () {}}
-                        >
-                            <Modal.Body>
-                                <Spinner animation="border" style={{marginRight:"20px"}} />
-                                <span style={{
-                                    marginLeft:"20px",
-                                    fontSize:"xx-large",
-                                }}>Загрузка</span>
-                            </Modal.Body>
-                        </Modal>
-                        <h2>Личный кабинет</h2>
-                    </Container>
-                </Jumbotron>
-
-
-
-
-
-            );
+            return ModalInfo('Загрузка', true);
         }
 
         if (this.state.payload.kind === "error") {
@@ -118,6 +101,9 @@ export default class Profile extends React.Component<{}, State> {
                     <h2>Личный кабинет</h2>
                     <h3>{this.state.payload.name}</h3>
                     <h4>{this.state.payload.email}</h4>
+                    <Button variant="secondary" size="lg" onClick={this.logout}  >
+                        Выход
+                    </Button>
                 </Container>
 
             </Jumbotron>

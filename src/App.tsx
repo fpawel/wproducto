@@ -1,17 +1,18 @@
 import React, { Component } from "react";
 import {
-    BrowserRouter as Router,
+    HashRouter as Router,
     Route,
     Switch,
     Link,
     RouteComponentProps,
-    match
+    match,
+    withRouter
 } from "react-router-dom";
 import "./App.css";
 import Login from "./Login";
 import Register from "./Register";
 import Profile from "./Profile";
-import {Container, Jumbotron} from "react-bootstrap";
+import {Container, Jumbotron, Navbar, Nav} from "react-bootstrap";
 
 function App() {
     console.log(process.env);
@@ -50,34 +51,6 @@ function Welcome(props: any) {
     );
 }
 
-// function Topic({ match }: RouteComponentProps<{ id: string }>) {
-//   return <h3>Requested Param: {match.params.id}</h3>;
-// }
-
-// function Topics({ match }: RouteComponentProps<{ id: string }>) {
-//   return (
-//     <div>
-//       <h2>Topics</h2>
-
-//       <ul>
-//         <li>
-//           <Link to={`${match.url}/components`}>Components</Link>
-//         </li>
-//         <li>
-//           <Link to={`${match.url}/props-v-state`}>Props v. State</Link>
-//         </li>
-//       </ul>
-
-//       <Route path={`${match.path}/:id`} component={Topic} />
-//       <Route
-//         exact
-//         path={match.path}
-//         render={() => <h3>Please select a topic.</h3>}
-//       />
-//     </div>
-//   );
-// }
-
 function NoMatch(props: any) {
     return (
         <div>
@@ -88,23 +61,20 @@ function NoMatch(props: any) {
     );
 }
 
-function Header() {
+const Header = withRouter ( props => {
+    const { location } = props;
     return (
-        <ul>
-            <li>
-                <Link to="/">Добро пожаловать</Link>
-            </li>
-            <li>
-                <Link to="/login">Вход</Link>
-            </li>
-            <li>
-                <Link to="/register">Регистрация</Link>
-            </li>
-            <li>
-                <Link to="/profile">Личный кабинет</Link>
-            </li>
-        </ul>
+        <Container>
+            <Navbar bg="primary" variant="dark">
+                <Navbar.Brand href="#/">Producto</Navbar.Brand>
+                <Nav className="mr-auto" activeKey={'#'+location.pathname}>
+                    <Nav.Link href="#/login" activeclassname="active" eventKey="#/login" >Вход</Nav.Link>
+                    <Nav.Link href="#/register" activeclassname="active" eventKey="#/register" >Регистрация</Nav.Link>
+                    <Nav.Link href="#/profile" activeclassname="active" eventKey="#/profile" >Личный кабинет</Nav.Link>
+                </Nav>
+            </Navbar>
+        </Container>
     );
-}
+});
 
 export default App;

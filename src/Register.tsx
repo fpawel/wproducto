@@ -1,9 +1,9 @@
 import React from "react";
 import * as AppKey from "./AppKey";
 import {
-    Button, Form, Spinner, Row, Alert, Card, FormGroup, FormLabel, FormControl
+    Button, Form, Spinner, Row, Alert, Container, FormGroup, FormLabel, FormControl, Jumbotron
 } from 'react-bootstrap';
-import { jsonrpc2 } from "./Api"
+import { jsonrpc2 } from "./helpers/Api"
 import { Link, Redirect } from "react-router-dom";
 import ModalInfo from "./components/ModalInfo"
 
@@ -13,8 +13,8 @@ interface State {
     pass: string;
     passAgain: string;
     request: boolean;
-    error?: string
-    redirectTo?: string,
+    error?: string;
+    redirect?: string;
 }
 
 export default class Register extends React.Component<{}, State> {
@@ -67,33 +67,32 @@ export default class Register extends React.Component<{}, State> {
                 role: "regular_user",
             });
             if (response.kind === "ok") {
-                localStorage.setItem(AppKey.token, response.result);
+                localStorage.setItem(AppKey.token, response.value);
                 this.setState({
-                    redirectTo: "/profile",
+                    redirect: "/profile",
                 });
                 return;
             }
-            this.setError(response.error.message);
+            this.setError(response.error);
         } catch (exn) {
             this.setError("Что-то пошло не так. Подробности в консоли браузера.");
         }
     }
 
     render() {
-        if (this.state.redirectTo) {
-            return <Redirect to={this.state.redirectTo} />
+        if (this.state.redirect) {
+            return <Redirect to={this.state.redirect} />
         }
 
         let { name, email, pass, passAgain, error } = this.state;
 
         return (
+            <Jumbotron>
 
-            <main >
-                {ModalInfo('Выполняется', this.state.request)};
-                <div>
-
+                <Container >
+                    {ModalInfo('Выполняется', this.state.request)}
                     <Form style={{
-                        margin: "0 auto",
+                        margin: "100px auto 0 auto",
                         width: "50%",
                         maxWidth: "400px",
                         border: "3px solid lightsteelblue",
@@ -105,32 +104,32 @@ export default class Register extends React.Component<{}, State> {
                         <Form.Group as={Row} >
                             <FormLabel>Имя пользователя</FormLabel>
                             <Form.Control type="name" placeholder="Имя пользователя"
-                                required onChange={this.handleInputName}
-                                value={name}
+                                          required onChange={this.handleInputName}
+                                          value={name}
                             />
                         </Form.Group>
 
                         <Form.Group as={Row} >
                             <FormLabel>Адрес электронной почты</FormLabel>
                             <Form.Control type="email" placeholder="Имя пользователя или email"
-                                required onChange={this.handleInputEmail}
-                                value={email} />
+                                          required onChange={this.handleInputEmail}
+                                          value={email} />
                         </Form.Group>
 
                         <Form.Group as={Row} >
                             <FormLabel>Пароль</FormLabel>
                             <Form.Control type="password" placeholder="Пароль"
-                                value={pass}
-                                required onChange={this.handleInputPassword} />
+                                          value={pass}
+                                          required onChange={this.handleInputPassword} />
                         </Form.Group>
 
                         <Form.Group as={Row} >
                             <FormLabel>Пароль ещё раз</FormLabel>
                             <Form.Control type="password" placeholder="Пароль ещё раз"
-                                isValid={passAgain.length > 0 && pass === passAgain}
-                                isInvalid={passAgain.length > 0 && pass !== passAgain}
-                                value={passAgain}
-                                required onChange={this.handleInputPasswordAgain} />
+                                          isValid={passAgain.length > 0 && pass === passAgain}
+                                          isInvalid={passAgain.length > 0 && pass !== passAgain}
+                                          value={passAgain}
+                                          required onChange={this.handleInputPasswordAgain} />
 
                             {pass !== passAgain ?
                                 <FormControl.Feedback type="valid">
@@ -142,9 +141,9 @@ export default class Register extends React.Component<{}, State> {
 
 
                         <Button variant="primary" type="submit"
-                            onClick={this.handleClick}
-                            className="float-right"
-                            disabled={this.state.request || pass !== passAgain}>
+                                onClick={this.handleClick}
+                                className="float-right"
+                                disabled={this.state.request || pass !== passAgain}>
                             Регистрация
                             {this.state.request ?
                                 <Spinner
@@ -167,8 +166,10 @@ export default class Register extends React.Component<{}, State> {
                             ) : null
                         }
                     </Form>
-                </div>
-            </main>
+                </Container>
+            </Jumbotron>
+
+
         );
     }
 }

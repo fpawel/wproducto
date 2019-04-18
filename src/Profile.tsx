@@ -1,114 +1,117 @@
 import React from "react";
 import * as AppKey from "./AppKey";
-import {
-    Button, Form, Spinner, Row, Alert, Card, FormGroup, FormLabel, Modal, Jumbotron, Container
-} from 'react-bootstrap';
-import { jsonrpc2 } from "./Api"
-import { Link, Redirect } from "react-router-dom";
-import ModalInfo from "./components/ModalInfo"
+import {Alert, Button, Col, Container, Form, FormControl, InputGroup, Jumbotron, Row} from 'react-bootstrap';
+import {Link, Redirect} from "react-router-dom";
+import {RPC} from "./components/RPC"
+
+const viewDescription = (text: string) =>
+    (<label style={{fontWeight: "bold"}}>{text}</label>)
+;
+
+export default function Profile() {
 
 
-interface State {
-    payload: {
-        kind: "initialized";
-        name: string;
-        email: string;
-    } | {
-        kind: "initializing";
-    } | {
-        kind: "redirect";
-    } | {
-        kind: "error";
-        error: string;
-    }
-}
+    return (<RPC
+        method="Auth.Profile"
+        params={[localStorage.getItem(AppKey.token)]}
+        view={(result) => {
+            if (result.kind === "exception") {
+                return (
+                    <Container>
+                        <Alert variant='danger' style={{marginTop: "20px"}}>
+                            <h2>Что-то пошло не так.</h2>
+                            <p>{result.exn.text}</p>
+                            <p>Попробуйте <Link to="/profile"> войти в личный кабинет </Link> ещё раз.
+                            </p>
+                        </Alert>
+                    </Container>
 
-export default class Profile extends React.Component<{}, State> {
-    constructor(props: {}) {
-        super(props);
-        this.state = {
-            payload: {
-                kind: "initializing",
-            },
-        };
-        this.logout = this.logout.bind(this);
-    }
-
-    async componentDidMount() {
-        try {
-            let response = await jsonrpc2("Auth.Profile", [localStorage.getItem(AppKey.token)]);
-            if (response.kind === "ok") {
-                this.setState({
-                    payload: {
-                        kind: "initialized",
-                        name: response.result.Name,
-                        email: response.result.Email,
-                    },
-                });
-                return;
+                );
             }
-            this.setState({
-                payload: {
-                    kind: "redirect",
-                },
-            });
-        } catch (exn) {
-            this.setState({
-                payload: {
-                    kind: "error",
-                    error: exn.text,
-                },
-            });
-        }
+            if (result.kind === "error") {
+                return (
+                    <Redirect to="/login"/>
+                );
+            }
 
-    }
+            return (
 
-    logout(){
-        localStorage.removeItem(AppKey.token);
-        this.setState({
-            payload: {
-                kind: "redirect",
-            },
-        });
-    }
+                <Jumbotron>
+                    <Container
+                        style={{
+                            margin: "100px auto 0 auto",
+                            width: "50%",
+                            maxWidth: "600px",
 
-    render() {
+                        }}
+                    >
+                        <h2
+                            style={{
+                                fontSize: "24px",
+                                fontWeight: "bold",
+                            }}
 
-        if (this.state.payload.kind === "redirect") {
-            return <Redirect to="/login" />
-        }
+                        >{result.value.Name} </h2>
+                        <hr/>
+
+                        {viewDescription('Сменить адрес электронной почты')}
+
+                        <InputGroup className="mb-3">
+                            <FormControl placeholder="Email" type="email" value={result.value.Email}/>
+                            <InputGroup.Append>
+                                <Button variant="outline-secondary">Выполнить</Button>
+                            </InputGroup.Append>
+                        </InputGroup>
+
+                        {viewDescription('Сменить пароль')}
+
+                        <Form>
+                            <Form.Group as={Row}>
+                                <Col  >
+                                    <Form.Label>
+                                        Новый пароль
+                                    </Form.Label>
+                                </Col>
+                                <Col >
+                                    <Form.Control type="password" placeholder="новый пароль"/>
+                                </Col>
+                            </Form.Group>
+
+                            <Form.Group as={Row}>
+                                <Col >
+                                </Col>
+                                <Col >
+                                    <Form.Control type="password" placeholder="новый пароль ещё раз"/>
+                                </Col>
+                            </Form.Group>
+
+                            <Form.Group as={Row}>
+                                <Col >
+                                    <Form.Label>
+                                        Старый пароль
+                                    </Form.Label>
+                                </Col>
+                                <Col>
+                                    <Form.Control type="password" placeholder="старый пароль"/>
+                                </Col>
+                            </Form.Group>
+                        </Form>
 
 
-        if (this.state.payload.kind === "initializing") {
-            return ModalInfo('Загрузка', true);
-        }
-
-        if (this.state.payload.kind === "error") {
-            return (<main>
-                <Alert variant='danger' style={{ marginTop: "20px" }}>
-                    <h2>Что-то пошло не так.</h2>
-                    <p>{this.state.payload.error}</p>
-                    <p>Попробуйте <Link to="/profile" > войти в личный кабинет </Link>  ещё раз.
-                    </p>
-                </Alert>
-            </main>);
-        }
+                        <Button variant="secondary" size="lg"
+                                onClick={() => {
+                                    localStorage.removeItem(AppKey.token);
+                                    window.location.hash = '#/login/';
+                                }}>
+                            Выход
+                        </Button>
 
 
-        return (<main>
-            <Jumbotron>
-                <Container>
-                    <h2>Личный кабинет</h2>
-                    <h3>{this.state.payload.name}</h3>
-                    <h4>{this.state.payload.email}</h4>
-                    <Button variant="secondary" size="lg" onClick={this.logout}  >
-                        Выход
-                    </Button>
-                </Container>
+                    </Container>
 
-            </Jumbotron>
+                </Jumbotron>
+            );
 
-        </main>);
-    }
+        }}
+    />);
 }
-

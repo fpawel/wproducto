@@ -31,57 +31,68 @@ const viewResult = (value:any) =>
             >{value.Name} </h1>
             <hr/>
 
-            {viewDescription('Сменить адрес электронной почты')}
+            <div
+                style={{
+                    margin: "100px auto 0 auto",
+                    width: "50%",
+                    maxWidth: "600px",
+                }}
+            >
+                {viewDescription('Сменить адрес электронной почты')}
 
-            <InputGroup className="mb-3">
-                <FormControl placeholder="Email" type="email" value={value.Email}/>
-                <InputGroup.Append>
-                    <Button variant="outline-secondary">Выполнить</Button>
-                </InputGroup.Append>
-            </InputGroup>
+                <InputGroup className="mb-3">
+                    <FormControl placeholder="Email" type="email" value={value.Email}/>
+                    <InputGroup.Append>
+                        <Button variant="outline-secondary">Выполнить</Button>
+                    </InputGroup.Append>
+                </InputGroup>
 
-            {viewDescription('Сменить пароль')}
+                {viewDescription('Сменить пароль')}
 
-            <Form>
-                <Form.Group as={Row}>
-                    <Col sm={3}>
-                        <Form.Label>
-                            Новый пароль
-                        </Form.Label>
-                    </Col>
-                    <Col>
-                        <Form.Control type="password" placeholder="новый пароль"/>
-                    </Col>
-                </Form.Group>
+                <Form>
+                    <Form.Group as={Row}>
+                        <Col sm={3}>
+                            <Form.Label>
+                                Новый пароль
+                            </Form.Label>
+                        </Col>
+                        <Col>
+                            <Form.Control type="password" placeholder="новый пароль"/>
+                        </Col>
+                    </Form.Group>
 
-                <Form.Group as={Row}>
-                    <Col sm={3}>
-                    </Col>
-                    <Col>
-                        <Form.Control type="password" placeholder="новый пароль ещё раз"/>
-                    </Col>
-                </Form.Group>
+                    <Form.Group as={Row}>
+                        <Col sm={3}>
+                        </Col>
+                        <Col>
+                            <Form.Control type="password" placeholder="новый пароль ещё раз"/>
+                        </Col>
+                    </Form.Group>
 
-                <Form.Group as={Row}>
-                    <Col sm={3}>
-                        <Form.Label>
-                            Старый пароль
-                        </Form.Label>
-                    </Col>
-                    <Col>
-                        <Form.Control type="password" placeholder="старый пароль"/>
-                    </Col>
-                </Form.Group>
-            </Form>
+                    <Form.Group as={Row}>
+                        <Col sm={3}>
+                            <Form.Label>
+                                Старый пароль
+                            </Form.Label>
+                        </Col>
+                        <Col>
+                            <Form.Control type="password" placeholder="старый пароль"/>
+                        </Col>
+                    </Form.Group>
+                </Form>
 
 
-            <Button variant="secondary" size="lg"
-                    onClick={() => {
-                        localStorage.removeItem(AppKey.token);
-                        window.location.hash = '#/login/';
-                    }}>
-                Выход
-            </Button>
+                <Button variant="secondary" size="lg"
+                        onClick={() => {
+                            localStorage.removeItem(AppKey.token);
+                            window.location.hash = '#/login/';
+                        }}>
+                    Выход
+                </Button>
+
+            </div>
+
+
         </Jumbotron>
 
     </Container>;

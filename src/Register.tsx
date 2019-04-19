@@ -73,7 +73,7 @@ export default class Register extends React.Component<{}, State> {
                 });
                 return;
             }
-            this.setError(response.error);
+            this.setError(response.error.message);
         } catch (exn) {
             this.setError("Что-то пошло не так. Подробности в консоли браузера.");
         }
@@ -101,7 +101,6 @@ export default class Register extends React.Component<{}, State> {
 
                     <Form style={{
                         margin: "100px auto 0 auto",
-                        width: "50%",
                         maxWidth: "400px",
                         border: "3px solid lightsteelblue",
                         background: "lightcyan",

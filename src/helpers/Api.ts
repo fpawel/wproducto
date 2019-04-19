@@ -4,7 +4,7 @@ type Response = {
     value: any,
 } | {
     kind: "error",
-    error: string,
+    error: {code:number, message:string},
 };
 
 interface error {

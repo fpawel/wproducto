@@ -50,11 +50,11 @@ export default class Login extends React.Component<{}, State> {
             if (response.kind === "ok") {
                 localStorage.setItem(AppKey.token, response.value);
                 this.setState({
-                    redirect: "profile",
+                    redirect: "/profile",
                 });
                 return;
             }
-            this.setError(response.error);
+            this.setError(response.error.message);
         } catch (exn) {
             this.setError("Что-то пошло не так. Подробности в консоли браузера.");
         }
@@ -79,7 +79,6 @@ export default class Login extends React.Component<{}, State> {
 
                     <Form style={{
                         margin: "100px auto 0 auto",
-                        width: "50%",
                         maxWidth: "400px",
                         border: "3px solid lightsteelblue",
                         background: "lightcyan",

@@ -7,7 +7,7 @@ type RPCResult = {
     value: any,
 } | {
     kind: "error",
-    error: string,
+    error: {code:number, message:string},
 } | {
     kind: "exception",
     exn: any,

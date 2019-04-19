@@ -87,10 +87,18 @@ export default class Register extends React.Component<{}, State> {
         let { name, email, pass, passAgain, error } = this.state;
 
         return (
-            <Jumbotron>
 
                 <Container >
+                    <Jumbotron>
                     {ModalInfo('Выполняется', this.state.request)}
+
+                    <h1 style={{
+                        fontSize: "34px",
+                        fontWeight: "bold",
+                    }}
+                    > Регистрация </h1>
+                    <hr/>
+
                     <Form style={{
                         margin: "100px auto 0 auto",
                         width: "50%",
@@ -166,8 +174,9 @@ export default class Register extends React.Component<{}, State> {
                             ) : null
                         }
                     </Form>
+                    </Jumbotron>
                 </Container>
-            </Jumbotron>
+
 
 
         );

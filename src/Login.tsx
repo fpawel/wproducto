@@ -1,6 +1,6 @@
 import React from "react";
 import * as AppKey from "./AppKey";
-import {Button, Form, Spinner, Row, Alert, Container, Card, FormGroup, FormLabel, Modal} from 'react-bootstrap';
+import {Button, Form, Spinner, Row, Alert, Container, Jumbotron, FormGroup, FormLabel, Modal} from 'react-bootstrap';
 import { jsonrpc2 } from "./helpers/Api"
 import { Link, Redirect } from "react-router-dom";
 import ModalInfo from "./components/ModalInfo"
@@ -50,7 +50,7 @@ export default class Login extends React.Component<{}, State> {
             if (response.kind === "ok") {
                 localStorage.setItem(AppKey.token, response.value);
                 this.setState({
-                    redirect: "/profile",
+                    redirect: "profile",
                 });
                 return;
             }
@@ -67,56 +67,66 @@ export default class Login extends React.Component<{}, State> {
         }
         return (
             <Container>
-                {ModalInfo('Вход', this.state.request)}
-                <Form style={{
-                    margin: "100px auto 0 auto",
-                    width: "50%",
-                    maxWidth: "400px",
-                    border: "3px solid lightsteelblue",
-                    background: "lightcyan",
-                    borderRadius: "15px",
-                    padding: "40px 40px 20px 40px",
-                }}>
-                    <Form.Group as={Row} >
-                        <FormLabel>Имя или email</FormLabel>
-                        <Form.Control type="input" placeholder="Имя пользователя или email"
-                                      value={this.state.name}
-                                      onChange={this.handleInputName} />
-                    </Form.Group>
+                <Jumbotron>
+                    {ModalInfo('Вход', this.state.request)}
 
-                    <Form.Group as={Row} >
-                        <FormLabel>Пароль</FormLabel>
-                        <Form.Control type="password" placeholder="Пароль"
-                                      value={this.state.pass}
-                                      onChange={this.handleInputPassword} />
-                    </Form.Group>
+                    <h1 style={{
+                        fontSize: "34px",
+                        fontWeight: "bold",
+                    }}
+                    > Вход </h1>
+                    <hr/>
 
-                    <Button variant="primary" type="submit"
-                            className="float-right" onClick={this.handleClick}
-                            disabled={this.state.request}>
-                        Вход
-                        {this.state.request ?
-                            <Spinner
-                                as="span"
-                                animation="grow"
-                                size="sm"
-                                role="status"
-                                aria-hidden="true"
-                            /> : null}
-                    </Button>
-                    <Link to="/register" >
-                        Ещё не зарегестрированы?
-                    </Link>
+                    <Form style={{
+                        margin: "100px auto 0 auto",
+                        width: "50%",
+                        maxWidth: "400px",
+                        border: "3px solid lightsteelblue",
+                        background: "lightcyan",
+                        borderRadius: "15px",
+                        padding: "40px 40px 20px 40px",
+                    }}>
+                        <Form.Group as={Row} >
+                            <FormLabel>Имя или email</FormLabel>
+                            <Form.Control type="input" placeholder="Имя пользователя или email"
+                                          value={this.state.name}
+                                          onChange={this.handleInputName} />
+                        </Form.Group>
 
-                    {!this.state.request && this.state.error ?
-                        (
-                            <Alert variant='danger' style={{ marginTop: "15px" }}>
-                                {this.state.error}
-                            </Alert>
-                        ) : null
-                    }
+                        <Form.Group as={Row} >
+                            <FormLabel>Пароль</FormLabel>
+                            <Form.Control type="password" placeholder="Пароль"
+                                          value={this.state.pass}
+                                          onChange={this.handleInputPassword} />
+                        </Form.Group>
 
-                </Form>
+                        <Button variant="primary" type="submit"
+                                className="float-right" onClick={this.handleClick}
+                                disabled={this.state.request}>
+                            Вход
+                            {this.state.request ?
+                                <Spinner
+                                    as="span"
+                                    animation="grow"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                /> : null}
+                        </Button>
+                        <Link to="/register" >
+                            Ещё не зарегестрированы?
+                        </Link>
+
+                        {!this.state.request && this.state.error ?
+                            (
+                                <Alert variant='danger' style={{ marginTop: "15px" }}>
+                                    {this.state.error}
+                                </Alert>
+                            ) : null
+                        }
+
+                    </Form>
+                </Jumbotron>
             </Container>
 
 

@@ -4,6 +4,7 @@ import {
     Route,
     Switch,
     Link,
+    Redirect,
     RouteComponentProps,
     match,
     withRouter
@@ -12,7 +13,11 @@ import "./App.css";
 import Login from "./Login";
 import Register from "./Register";
 import Profile from "./Profile";
-import {Container, Jumbotron, Navbar, Nav} from "react-bootstrap";
+import {NavItem,  NavDropdown, DropdownButton,  Container, Jumbotron, Navbar, Nav} from "react-bootstrap";
+
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUser } from '@fortawesome/free-solid-svg-icons';
+import * as AppKey from "./AppKey";
 
 function App() {
     console.log(process.env);
@@ -23,6 +28,7 @@ function App() {
                 <Switch>
                     <Route exact path="/" component={Welcome} />
                     <Route path="/login" component={Login} />
+                    <Route path="/logout" component={Logout} />
                     <Route path="/register" component={Register} />
                     <Route path="/profile" component={Profile} />
                     <Route component={NoMatch} />
@@ -32,10 +38,17 @@ function App() {
     );
 }
 
-function Welcome(props: any) {
+function Logout() {
+    localStorage.removeItem(AppKey.token);
     return (
-        <Jumbotron>
+        <Redirect to={"/#"} />
+    )
+}
+
+function Welcome() {
+    return (
             <Container>
+                <Jumbotron>
                 <h2>Здравствуйте</h2>
                 <p>Добро пожаловать на наш сайт.</p>
                 <p>
@@ -45,9 +58,8 @@ function Welcome(props: any) {
                 <p>
                     Зарегестрированы? Проверьте свой <Link to="/profile">личный кабинет</Link>.
                 </p>
+                </Jumbotron>
             </Container>
-
-        </Jumbotron>
     );
 }
 
@@ -61,16 +73,44 @@ function NoMatch(props: any) {
     );
 }
 
+
+
 const Header = withRouter ( props => {
     const { location } = props;
     return (
+
         <Container>
             <Navbar bg="primary" variant="dark">
                 <Navbar.Brand href="#/">Producto</Navbar.Brand>
                 <Nav className="mr-auto" activeKey={'#'+location.pathname}>
-                    <Nav.Link href="#/login" activeclassname="active" eventKey="#/login" >Вход</Nav.Link>
-                    <Nav.Link href="#/register" activeclassname="active" eventKey="#/register" >Регистрация</Nav.Link>
-                    <Nav.Link href="#/profile" activeclassname="active" eventKey="#/profile" >Личный кабинет</Nav.Link>
+                    {/*<Nav.Link href="#/login" activeclassname="active" eventKey="#/login" >Вход</Nav.Link>*/}
+                    {/*<Nav.Link href="#/register" activeclassname="active" eventKey="#/register" >Регистрация</Nav.Link>*/}
+
+                </Nav>
+                <Nav activeKey={'#'+location.pathname} >
+                    <NavDropdown id="basic-nav-dropdown"
+                                 title={(<FontAwesomeIcon icon={ faUser }/>)}
+                                 activeKey={'#'+location.pathname}
+                    >
+
+                        <NavDropdown.Item  href="#/login" >
+                            Вход
+                        </NavDropdown.Item>
+
+                        <NavDropdown.Item  href="#/register" >
+                            Регистрация
+                        </NavDropdown.Item>
+
+                        <NavDropdown.Divider />
+
+                        <NavDropdown.Item href="#/profile" >
+                            Личный кабинет
+                        </NavDropdown.Item>
+                        <NavDropdown.Divider />
+                        <NavDropdown.Item href="#/logout" >
+                            Выход
+                        </NavDropdown.Item>
+                    </NavDropdown>
                 </Nav>
             </Navbar>
         </Container>

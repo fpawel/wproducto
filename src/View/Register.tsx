@@ -1,20 +1,31 @@
 import React from "react";
-import * as AppKey from "./AppKey";
+import * as AppKey from "../AppKey";
 import {
-    Button, Form, Spinner, Row, Alert, Container, FormGroup, FormLabel, FormControl, Jumbotron
+    Button, Form, Spinner, Row, Alert, Container, FormGroup, FormLabel, FormControl, Jumbotron, ButtonToolbar
 } from 'react-bootstrap';
-import { jsonrpc2 } from "./helpers/Api"
 import { Link, Redirect } from "react-router-dom";
-import ModalInfo from "./components/ModalInfo"
+import {appState} from "../AppState"
+import {observer} from "mobx-react";
 
 interface State {
     name: string;
     email: string;
     pass: string;
     passAgain: string;
-    request: boolean;
     error?: string;
     redirect?: string;
+}
+
+
+@observer
+class RegisterButton extends React.Component<{onClick: () => void}, {}>{
+    render(){
+        return <Button variant="primary" type="submit"
+                       className="float-right" onClick={this.props.onClick}
+                       disabled={appState.rpcRequest==='Auth.Register'}>
+            Регистрация
+        </Button>;
+    }
 }
 
 export default class Register extends React.Component<{}, State> {
@@ -25,7 +36,6 @@ export default class Register extends React.Component<{}, State> {
             email: "",
             pass: "",
             passAgain: "",
-            request: false,
         };
         this.handleClick = this.handleClick.bind(this);
         this.handleInputName = this.handleInputName.bind(this);
@@ -51,32 +61,21 @@ export default class Register extends React.Component<{}, State> {
 
     setError(error: string) {
         this.setState({
-            request: false,
             error: error,
         });
     }
 
     async handleClick() {
-        this.setState({ request: true });
+        this.setState({ error:undefined });
 
-        try {
-            let response = await jsonrpc2("Auth.Register", {
-                name: this.state.name,
-                pass: this.state.pass,
-                email: this.state.email,
-                role: "regular_user",
+        let response = await appState.register(this.state);
+        if (response.type === "result") {
+            this.setState({
+                redirect: "/profile",
             });
-            if (response.kind === "ok") {
-                localStorage.setItem(AppKey.token, response.value);
-                this.setState({
-                    redirect: "/profile",
-                });
-                return;
-            }
-            this.setError(response.error.message);
-        } catch (exn) {
-            this.setError("Что-то пошло не так. Подробности в консоли браузера.");
+            return;
         }
+        this.setError(response.error.message);
     }
 
     render() {
@@ -90,7 +89,6 @@ export default class Register extends React.Component<{}, State> {
 
                 <Container >
                     <Jumbotron>
-                    {ModalInfo('Выполняется', this.state.request)}
 
                     <h1 style={{
                         fontSize: "34px",
@@ -100,12 +98,12 @@ export default class Register extends React.Component<{}, State> {
                     <hr/>
 
                     <Form style={{
-                        margin: "100px auto 0 auto",
+                        margin: "0 auto",
                         maxWidth: "400px",
                         border: "3px solid lightsteelblue",
                         background: "lightcyan",
                         borderRadius: "15px",
-                        padding: "40px 40px 20px 40px",
+                        padding: "40px",
                     }}>
 
                         <Form.Group as={Row} >
@@ -145,39 +143,32 @@ export default class Register extends React.Component<{}, State> {
                                 : null
                             }
                         </Form.Group>
+                        <Form.Group as={Row} >
+                            <ButtonToolbar>
 
+                                <Button variant="link" onClick={
+                                    () => {
+                                        appState.modal = "login";
+                                    }
+                                }>
+                                    Уже зарегестрированы?
+                                </Button>
 
-                        <Button variant="primary" type="submit"
-                                onClick={this.handleClick}
-                                className="float-right"
-                                disabled={this.state.request || pass !== passAgain}>
-                            Регистрация
-                            {this.state.request ?
-                                <Spinner
-                                    as="span"
-                                    animation="grow"
-                                    size="sm"
-                                    role="status"
-                                    aria-hidden="true"
-                                /> : null}
-                        </Button>
-                        <Link to="/profile" >
-                            Уже зарегестрированы?
-                        </Link>
+                                <RegisterButton onClick={this.handleClick} />
 
-                        {!this.state.request && error ?
+                            </ButtonToolbar>
+                        </Form.Group>
+                    </Form>
+
+                        { error ?
                             (
                                 <Alert variant='danger' style={{ marginTop: "20px" }}>
                                     {error}
                                 </Alert>
                             ) : null
                         }
-                    </Form>
                     </Jumbotron>
                 </Container>
-
-
-
         );
     }
 }

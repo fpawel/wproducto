@@ -1,16 +1,28 @@
 import React from "react";
-import * as AppKey from "./AppKey";
-import {Button, Form, Spinner, Row, Alert, Container, Jumbotron, FormGroup, FormLabel, Modal} from 'react-bootstrap';
-import { jsonrpc2 } from "./helpers/Api"
+import * as AppKey from "../AppKey";
+import {Button, ButtonProps, Form, Spinner, Row, Alert, Container, Jumbotron,  FormLabel, OverlayTrigger } from 'react-bootstrap';
 import { Link, Redirect } from "react-router-dom";
-import ModalInfo from "./components/ModalInfo"
+import {appState} from "../AppState"
+import {observer} from "mobx-react";
 
 interface State {
     name: string;
     pass: string;
-    request: boolean;
     error?: string,
     redirect?: string,
+}
+
+type ButtonOnClickHandler = () => void;
+
+@observer
+class LoginButton extends React.Component< {onClick: ButtonOnClickHandler}, {}>{
+    render(){
+        return <Button variant="primary" type="submit"
+                       className="float-right" onClick={this.props.onClick}
+                       disabled={appState.rpcRequest === 'Auth.Login'} >
+            Вход
+        </Button>;
+    }
 }
 
 export default class Login extends React.Component<{}, State> {
@@ -19,7 +31,6 @@ export default class Login extends React.Component<{}, State> {
         this.state = {
             name: "",
             pass: "",
-            request: false,
         };
         this.handleClick = this.handleClick.bind(this);
         this.handleInputName = this.handleInputName.bind(this);
@@ -34,41 +45,33 @@ export default class Login extends React.Component<{}, State> {
         this.setState({ pass: evt.target.value });
     }
 
-    setError(error: string) {
-        this.setState({
-            request: false,
-            error: error,
-        });
-    }
+
 
     async handleClick() {
 
-        this.setState({ request: true });
+        this.setState({ error:undefined });
 
-        try {
-            let response = await jsonrpc2("Auth.Login", { name: this.state.name, pass: this.state.pass });
-            if (response.kind === "ok") {
-                localStorage.setItem(AppKey.token, response.value);
-                this.setState({
-                    redirect: "/profile",
-                });
-                return;
-            }
-            this.setError(response.error.message);
-        } catch (exn) {
-            this.setError("Что-то пошло не так. Подробности в консоли браузера.");
+        const response = await appState.login(this.state);
+        if (response.type === "result") {
+            this.setState({
+                redirect: "/profile",
+            });
+            return;
         }
+        this.setState({
+            error: response.error.message,
+        });
     }
 
     render() {
-
-        if (this.state.redirect) {
-            return <Redirect to={this.state.redirect} />
+        const {error, redirect} = this.state
+        if (redirect) {
+            return <Redirect to={redirect} />
         }
+
         return (
             <Container>
                 <Jumbotron>
-                    {ModalInfo('Вход', this.state.request)}
 
                     <h1 style={{
                         fontSize: "34px",
@@ -78,12 +81,12 @@ export default class Login extends React.Component<{}, State> {
                     <hr/>
 
                     <Form style={{
-                        margin: "100px auto 0 auto",
+                        margin: "10px auto",
                         maxWidth: "400px",
                         border: "3px solid lightsteelblue",
                         background: "lightcyan",
                         borderRadius: "15px",
-                        padding: "40px 40px 20px 40px",
+                        padding: "40px",
                     }}>
                         <Form.Group as={Row} >
                             <FormLabel>Имя или email</FormLabel>
@@ -99,32 +102,23 @@ export default class Login extends React.Component<{}, State> {
                                           onChange={this.handleInputPassword} />
                         </Form.Group>
 
-                        <Button variant="primary" type="submit"
-                                className="float-right" onClick={this.handleClick}
-                                disabled={this.state.request}>
-                            Вход
-                            {this.state.request ?
-                                <Spinner
-                                    as="span"
-                                    animation="grow"
-                                    size="sm"
-                                    role="status"
-                                    aria-hidden="true"
-                                /> : null}
-                        </Button>
+                        <LoginButton onClick={this.handleClick} />
+
+
                         <Link to="/register" >
                             Ещё не зарегестрированы?
                         </Link>
-
-                        {!this.state.request && this.state.error ?
-                            (
-                                <Alert variant='danger' style={{ marginTop: "15px" }}>
-                                    {this.state.error}
-                                </Alert>
-                            ) : null
-                        }
-
                     </Form>
+
+                    { error ?
+                        (
+                            <Alert variant='danger' style={{ marginTop: "20px" }}>
+                                {error}
+                            </Alert>
+                        ) : null
+                    }
+
+
                 </Jumbotron>
             </Container>
 

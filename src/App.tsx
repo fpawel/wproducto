@@ -1,54 +1,104 @@
-import React, { Component } from "react";
+import React from "react";
 import {
     HashRouter as Router,
     Route,
     Switch,
     Link,
     Redirect,
-    RouteComponentProps,
-    match,
-    withRouter
 } from "react-router-dom";
 import "./App.css";
-import Login from "./Login";
-import Register from "./Register";
-import Profile from "./Profile";
-import {NavItem,  NavDropdown, DropdownButton,  Container, Jumbotron, Navbar, Nav} from "react-bootstrap";
+import Login from "./View/Login";
+import Register from "./View/Register";
+import {Profile} from "./View/Profile";
+import {appState} from "./AppState";
+import {observer} from "mobx-react";
+import {
+    Container,
+    Jumbotron,
+    Modal,
+    Spinner,
+    Alert
+} from "react-bootstrap";
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser } from '@fortawesome/free-solid-svg-icons';
 import * as AppKey from "./AppKey";
+import {AppNavBar} from "./View/AppNavBar";
+import TreeViewExample from "./View/TreeViewExample";
 
-function App() {
-    console.log(process.env);
-    return (
-        <Router>
+class App extends React.Component {
+    async componentDidMount() {
+        await appState.fetchProfile();
+        console.log(process.env);
+    }
+
+    render() {
+        return <Router>
             <div>
-                <Header />
+                <AppNavBar/>
+                <ConnectionError/>
                 <Switch>
-                    <Route exact path="/" component={Welcome} />
-                    <Route path="/login" component={Login} />
-                    <Route path="/logout" component={Logout} />
-                    <Route path="/register" component={Register} />
-                    <Route path="/profile" component={Profile} />
-                    <Route component={NoMatch} />
+                    <Route exact path="/" component={Welcome}/>
+                    <Route path="/login" component={Login}/>
+                    <Route path="/logout" component={Logout}/>
+                    <Route path="/register" component={Register}/>
+                    <Route path="/profile" component={Profile}/>
+                    <Route component={NoMatch}/>
                 </Switch>
             </div>
-        </Router>
-    );
+        </Router>;
+    }
 }
+
+// @observer
+// class ModalPopupFetch extends React.Component {
+//     render() {
+//         return <Modal
+//             size="sm"
+//             aria-labelledby="contained-modal-title-vcenter"
+//             centered
+//             show={appState.request}
+//             onHide={function () {
+//             }}
+//         >
+//             <Modal.Body>
+//                 <Spinner animation="border" style={{marginRight: "10px"}}/>
+//                 <span style={{
+//                     marginLeft: "10px",
+//                     fontSize: "large",
+//                 }}>{'Загрузка'}</span>
+//             </Modal.Body>
+//         </Modal>;
+//     }
+// }
+
+
+@observer
+class ConnectionError extends React.Component {
+    render() {
+        if (!appState.connectionError) {
+            return null;
+        }
+        return <Container>
+            <Alert variant='danger' style={{marginTop: "15px"}}>
+                <h2>Что-то пошло не так.</h2>
+                <p>{appState.connectionError}</p>
+            </Alert>
+        </Container>
+    }
+}
+
 
 function Logout() {
     localStorage.removeItem(AppKey.token);
+    appState.setAuth({type: 'guest'});
     return (
-        <Redirect to={"/#"} />
+        <Redirect to={"/#"}/>
     )
 }
 
 function Welcome() {
     return (
-            <Container>
-                <Jumbotron>
+        <Container>
+            <Jumbotron>
                 <h2>Здравствуйте</h2>
                 <p>Добро пожаловать на наш сайт.</p>
                 <p>
@@ -58,8 +108,9 @@ function Welcome() {
                 <p>
                     Зарегестрированы? Проверьте свой <Link to="/profile">личный кабинет</Link>.
                 </p>
-                </Jumbotron>
-            </Container>
+                <TreeViewExample />
+            </Jumbotron>
+        </Container>
     );
 }
 
@@ -72,49 +123,5 @@ function NoMatch(props: any) {
         </div>
     );
 }
-
-
-
-const Header = withRouter ( props => {
-    const { location } = props;
-    return (
-
-        <Container>
-            <Navbar bg="primary" variant="dark">
-                <Navbar.Brand href="#/">Producto</Navbar.Brand>
-                <Nav className="mr-auto" activeKey={'#'+location.pathname}>
-                    {/*<Nav.Link href="#/login" activeclassname="active" eventKey="#/login" >Вход</Nav.Link>*/}
-                    {/*<Nav.Link href="#/register" activeclassname="active" eventKey="#/register" >Регистрация</Nav.Link>*/}
-
-                </Nav>
-                <Nav activeKey={'#'+location.pathname} >
-                    <NavDropdown id="basic-nav-dropdown"
-                                 title={(<FontAwesomeIcon icon={ faUser }/>)}
-                                 activeKey={'#'+location.pathname}
-                    >
-
-                        <NavDropdown.Item  href="#/login" >
-                            Вход
-                        </NavDropdown.Item>
-
-                        <NavDropdown.Item  href="#/register" >
-                            Регистрация
-                        </NavDropdown.Item>
-
-                        <NavDropdown.Divider />
-
-                        <NavDropdown.Item href="#/profile" >
-                            Личный кабинет
-                        </NavDropdown.Item>
-                        <NavDropdown.Divider />
-                        <NavDropdown.Item href="#/logout" >
-                            Выход
-                        </NavDropdown.Item>
-                    </NavDropdown>
-                </Nav>
-            </Navbar>
-        </Container>
-    );
-});
 
 export default App;

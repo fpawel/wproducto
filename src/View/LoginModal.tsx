@@ -1,23 +1,8 @@
 import React from "react";
 import {observer} from "mobx-react";
-import {
-    Modal,
-    Button,
-    Spinner,
-    Container,
-    Jumbotron,
-    Form,
-    Popover,
-    OverlayTrigger,
-    Alert,
-    InputGroup,
-    FormControl, Overlay
-} from "react-bootstrap";
+import {Alert, Button, FormControl, InputGroup, Modal, Spinner} from "react-bootstrap";
 import {appState} from "../AppState";
-import {Redirect} from "react-router";
-import {Link} from "react-router-dom";
 import './LoginModal.css'
-
 
 
 interface State {
@@ -25,6 +10,8 @@ interface State {
     pass: string;
     error?: string,
 }
+
+
 
 @observer
 class LoginModalObserver extends React.Component<{}, State> {
@@ -42,22 +29,21 @@ class LoginModalObserver extends React.Component<{}, State> {
     }
 
     handleInputName(evt: any) {
-        this.setState({ name: evt.target.value });
+        this.setState({name: evt.target.value});
     }
 
     handleInputPassword(evt: any) {
-        this.setState({ pass: evt.target.value });
+        this.setState({pass: evt.target.value});
     }
 
     handleResetError() {
-        this.setState({ error: undefined });
+        this.setState({error: undefined});
     }
-
 
 
     async handleClick() {
 
-        this.setState({ error:undefined });
+        this.setState({error: undefined});
         try {
             const response = await appState.login(this.state);
             if (response.type === "error") {
@@ -75,12 +61,12 @@ class LoginModalObserver extends React.Component<{}, State> {
         }
     }
 
-    render(){
+    render() {
         let {error, name, pass,} = this.state;
 
         return (
             <Modal dialogClassName='width-400px' aria-labelledby="contained-modal-title-vcenter"
-                show={appState.modal === 'login'}
+                   show={appState.modal === 'login'}
                    onHide={() => appState.setModal(null)}
 
             >
@@ -101,7 +87,7 @@ class LoginModalObserver extends React.Component<{}, State> {
                         />
                     </InputGroup>
 
-                    <br />
+                    <br/>
 
                     <h6>Пароль:</h6>
 
@@ -109,17 +95,17 @@ class LoginModalObserver extends React.Component<{}, State> {
                         <FormControl aria-label="Large" aria-describedby="inputGroup-sizing-sm"
                                      type="password" placeholder="Пароль"
                                      value={pass}
-                                     onChange={this.handleInputPassword} />
+                                     onChange={this.handleInputPassword}/>
                     </InputGroup>
 
-                    { error ?
+                    {error ?
                         (
-                            <Alert variant='danger' dismissible style={{ marginTop: "10px" }} onClose={this.handleResetError}>
+                            <Alert variant='danger' dismissible style={{marginTop: "10px"}}
+                                   onClose={this.handleResetError}>
                                 {error}
                             </Alert>
                         ) : null
                     }
-
 
 
                 </Modal.Body>
@@ -131,6 +117,15 @@ class LoginModalObserver extends React.Component<{}, State> {
                                 onClick={this.handleClick}
                         >
                             Вход
+
+                            {appState.rpcRequest === 'Auth.Login' ?
+                                <Spinner
+                                    as="span"
+                                    animation="grow"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                /> : null}
 
                         </Button>
 

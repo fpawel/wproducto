@@ -78,7 +78,9 @@ class ConnectionError extends React.Component {
             return null;
         }
         return <Container>
-            <Alert variant='danger' style={{marginTop: "15px"}}>
+            <Alert variant='danger' style={{marginTop: "15px"}} dismissible
+                   onClose={() => appState.setConnectionError(null)}
+            >
                 <h2>Что-то пошло не так.</h2>
                 <p>{appState.connectionError}</p>
             </Alert>

@@ -20,6 +20,15 @@ class LoginButton extends React.Component< {onClick: ButtonOnClickHandler}, {}>{
         return <Button variant="primary" type="submit"
                        className="float-right" onClick={this.props.onClick}
                        disabled={appState.rpcRequest === 'Auth.Login'} >
+
+            {appState.rpcRequest === 'Auth.Login' ?
+                <Spinner
+                    as="span"
+                    animation="grow"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                /> : null}
             Вход
         </Button>;
     }

@@ -65,10 +65,9 @@ class LoginModalObserver extends React.Component<{}, State> {
         let {error, name, pass,} = this.state;
 
         return (
-            <Modal dialogClassName='width-400px' aria-labelledby="contained-modal-title-vcenter"
+            <Modal dialogClassName='login-modal-dialog' aria-labelledby="contained-modal-title-vcenter"
                    show={appState.modal === 'login'}
                    onHide={() => appState.setModal(null)}
-
             >
                 <Modal.Header closeButton>
                     <Modal.Title id="contained-modal-title-vcenter">

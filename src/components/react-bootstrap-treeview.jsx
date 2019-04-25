@@ -2,7 +2,7 @@ import React from "react";
 import PropTypes from 'prop-types';
 import "./react-bootstrap-treeview.css";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPlus, faMinus} from "@fortawesome/free-solid-svg-icons";
+import {faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
 
 export class TreeView extends React.Component {
 
@@ -46,11 +46,6 @@ export class TreeView extends React.Component {
 TreeView.propTypes = {
     levels: PropTypes.number,
 
-    expandIcon: PropTypes.string,
-    collapseIcon: PropTypes.string,
-    emptyIcon: PropTypes.string,
-    nodeIcon: PropTypes.string,
-
     color: PropTypes.string,
     backColor: PropTypes.string,
     borderColor: PropTypes.string,
@@ -69,12 +64,6 @@ TreeView.propTypes = {
 
 TreeView.defaultProps = {
     levels: 2,
-
-    expandIcon: 'fa fa-expand',
-    collapseIcon: 'fa fa-collapse',
-    emptyIcon: 'glyphicon',
-    nodeIcon: 'glyphicon glyphicon-stop',
-
     color: undefined,
     backColor: undefined,
     borderColor: undefined,
@@ -142,35 +131,26 @@ class TreeNode extends React.Component {
             indents.push(<span className='indent' key={i} />);
         }
 
-        let expandCollapseIcon;
+        let expandCollapseIcon = null;
         if (node.nodes) {
             if (!expanded) {
-                expandCollapseIcon = (
-
-                    <span className={options.expandIcon}
-                          onClick={this.toggleExpanded.bind(this, node.nodeId)}>
+                expandCollapseIcon =
+                    <span onClick={this.toggleExpanded.bind(this, node.nodeId)} style={{margin:"0px 10px"}} >
                         <FontAwesomeIcon icon={faPlus} />
-                    </span>
-                );
+                    </span>;
+
             } else {
-                expandCollapseIcon = (
-                    <span className={options.collapseIcon}
-                          onClick={this.toggleExpanded.bind(this, node.nodeId)}>
+                expandCollapseIcon =
+                    <span onClick={this.toggleExpanded.bind(this, node.nodeId)} style={{margin:"0px 10px"}} >
                         <FontAwesomeIcon icon={faMinus} />
-                    </span>
-                );
+                    </span>;
             }
         } else {
-            expandCollapseIcon = (
-                <span className={options.emptyIcon}/>
-            );
-        }
+            expandCollapseIcon =
+                <span style={{margin:"0px 10px 0px 17px"}} >
 
-        let nodeIcon = (
-            <span className='icon'>
-        <i className={node.icon || options.nodeIcon}/>
-      </span>
-        );
+                </span>;
+        }
 
         let nodeText;
         if (options.enableLinks) {
@@ -201,7 +181,6 @@ class TreeNode extends React.Component {
                 key={node.nodeId}>
                 {indents}
                 {expandCollapseIcon}
-                {nodeIcon}
                 {nodeText}
                 {badges}
             </li>

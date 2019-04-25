@@ -1,3 +1,5 @@
-.width-400px{
+.login-modal-dialog{
     width: 400px;
+    border: 1px solid lightsteelblue;
+    background: lightcyan;
 }

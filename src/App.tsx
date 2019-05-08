@@ -34,7 +34,6 @@ class App extends React.Component {
         return <Router>
             <div>
                 <AppNavBar/>
-                <ConnectionError/>
                 <Switch>
                     <Route exact path="/" component={Welcome}/>
                     <Route path="/login" component={Login}/>
@@ -43,32 +42,11 @@ class App extends React.Component {
                     <Route path="/profile" component={Profile}/>
                     <Route component={NoMatch}/>
                 </Switch>
+                <ConnectionError/>
             </div>
         </Router>;
     }
 }
-
-// @observer
-// class ModalPopupFetch extends React.Component {
-//     render() {
-//         return <Modal
-//             size="sm"
-//             aria-labelledby="contained-modal-title-vcenter"
-//             centered
-//             show={appState.request}
-//             onHide={function () {
-//             }}
-//         >
-//             <Modal.Body>
-//                 <Spinner animation="border" style={{marginRight: "10px"}}/>
-//                 <span style={{
-//                     marginLeft: "10px",
-//                     fontSize: "large",
-//                 }}>{'Загрузка'}</span>
-//             </Modal.Body>
-//         </Modal>;
-//     }
-// }
 
 
 @observer
@@ -77,14 +55,40 @@ class ConnectionError extends React.Component {
         if (!appState.connectionError) {
             return null;
         }
-        return <Container>
-            <Alert variant='danger' style={{marginTop: "15px"}} dismissible
-                   onClose={() => appState.setConnectionError(null)}
-            >
-                <h2>Что-то пошло не так.</h2>
-                <p>{appState.connectionError}</p>
-            </Alert>
-        </Container>
+        // return <Container>
+        //     <Alert variant='danger' style={{marginTop: "15px"}} dismissible
+        //            onClose={() => appState.setConnectionError(null)}
+        //     >
+        //         <h2>Что-то пошло не так.</h2>
+        //         <p>{appState.connectionError}</p>
+        //     </Alert>
+        // </Container>;
+
+        return (
+            <div>
+                <div style={{
+                    display: 'block',
+                    height: '112px',
+                    width: '100%',
+                }} />
+                <div style={{
+                    position: "fixed",
+                    left: "0",
+                    bottom: "0",
+                    height: "112px",
+                    width: "100%",
+                }}>
+                    <Container>
+                        <Alert variant='danger'  dismissible
+                               onClose={() => appState.setConnectionError(null)}
+                        >
+                            <h2>Что-то пошло не так.</h2>
+                            <p>{appState.connectionError}</p>
+                        </Alert>
+                    </Container>
+                </div>
+            </div>
+        );
     }
 }
 
@@ -122,6 +126,33 @@ function NoMatch(props: any) {
             <h3>
                 No match for <code>{props.location.pathname}</code>
             </h3>
+        </div>
+    );
+}
+
+function Footer({ children } : {children?: React.ReactNode}) {
+
+    return (
+        <div>
+            <div style={{
+                display: 'block',
+                padding: '20px',
+                height: '160px',
+                width: '100%',
+            }} />
+            <div style={{
+                backgroundColor: "#F8F8F8",
+                borderTop: "1px solid #E7E7E7",
+                textAlign: "center",
+                padding: "20px",
+                position: "fixed",
+                left: "0",
+                bottom: "0",
+                height: "160px",
+                width: "100%",
+            }}>
+                { children }
+            </div>
         </div>
     );
 }

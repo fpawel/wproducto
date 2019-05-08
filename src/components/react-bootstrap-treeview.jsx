@@ -8,29 +8,34 @@ export class TreeView extends React.Component {
 
     constructor(props){
         super(props);
-        this.setNodeId({nodes: this.props.data});
+        let nodes = [];
+        initializeNodes(nodes, {nodes: this.props.data});
+        this.state = {selectedNodeID:-1};
+
+        this.toggleSelectedNodeID = this.toggleSelectedNodeID.bind(this);
     }
 
-
-    setNodeId(node) {
-
-        if (!node.nodes) return;
-
-        let _this = this;
-        node.nodes.forEach(function checkStates(node) {
-            node.nodeId = _this.props.nodes.length;
-            _this.props.nodes.push(node);
-            _this.setNodeId(node);
-        });
+    toggleSelectedNodeID(id) {
+        if (this.state.selectedNodeID === id){
+            this.setState({selectedNodeID: -1});
+            return;
+        }
+        this.setState({selectedNodeID: id});
     }
 
     render() {
-
         let _this = this;
         let children = [];
-
         this.props.data.forEach(function (node,index) {
-            children.push(<TreeNode node={node} options={_this.props} level={1} key={'lev0_'+index.toString()} />);
+            children.push(
+                <TreeNode
+                    node={node}
+                    options={_this.props}
+                    level={1}
+                    key={'lev0_'+index.toString()}
+                    selectedNodeID={_this.state.selectedNodeID}
+                    toggleSelectedNodeID={_this.toggleSelectedNodeID}
+                />);
         });
 
         return (
@@ -43,13 +48,23 @@ export class TreeView extends React.Component {
     }
 }
 
+function initializeNodes(nodes, node) {
+
+    if (!node.nodes) return;
+
+    node.nodes.forEach(function(node) {
+        node.nodeId = nodes.length;
+        nodes.push(node);
+        initializeNodes(nodes, node);
+    });
+}
+
 TreeView.propTypes = {
     levels: PropTypes.number,
 
     color: PropTypes.string,
     backColor: PropTypes.string,
     borderColor: PropTypes.string,
-    onhoverColor: PropTypes.string,
     selectedColor: PropTypes.string,
     selectedBackColor: PropTypes.string,
 
@@ -67,7 +82,6 @@ TreeView.defaultProps = {
     color: undefined,
     backColor: undefined,
     borderColor: undefined,
-    onhoverColor: '#F5F5F5', // TODO Not implemented yet, investigate radium.js 'A toolchain for React component styling'
     selectedColor: '#FFFFFF',
     selectedBackColor: '#428bca',
 
@@ -85,7 +99,6 @@ class TreeNode extends React.Component {
         super(props);
         this.state = {
             expanded: false,
-            selected: false,
         };
         this.toggleExpanded = this.toggleExpanded.bind(this);
         this.toggleSelected = this.toggleSelected.bind(this);
@@ -98,17 +111,18 @@ class TreeNode extends React.Component {
     }
 
     toggleSelected(id, event) {
-        this.setState({selected: !this.state.selected});
+        this.props.toggleSelectedNodeID(id);
         event.stopPropagation();
     }
 
     render() {
 
-        const {node, options, level } = this.props;
-        const {expanded, selected} = this.state;
+        const {node, options, level, selectedNodeID, toggleSelectedNodeID } = this.props;
+        const {expanded} = this.state;
 
-        let style;
-        if (options.highlightSelected && selected) {
+
+        let style = {};
+        if (options.highlightSelected && (node.nodeId === selectedNodeID) ) {
             style = {
                 color: options.selectedColor,
                 backgroundColor: options.selectedBackColor
@@ -147,7 +161,7 @@ class TreeNode extends React.Component {
             }
         } else {
             expandCollapseIcon =
-                <span style={{margin:"0px 10px 0px 17px"}} >
+                <span style={{margin:"0px 10px 0px 24px"}} >
 
                 </span>;
         }
@@ -174,6 +188,9 @@ class TreeNode extends React.Component {
             });
         }
         let result = [];
+
+        style.padding = "2px 3px";
+
         result.push(
             <li className='list-group-item'
                 style={style}
@@ -187,7 +204,15 @@ class TreeNode extends React.Component {
         );
         if (expanded) {
             node.nodes.forEach(function (node,index) {
-                result.push(<TreeNode node={node} options={options} level={level+1} key={'lev'+level.toString() + '_'+ index.toString()}/>);
+                result.push(
+                    <TreeNode
+                        node={node}
+                        options={options}
+                        level={level+1}
+                        key={'lev'+level.toString() + '_'+ index.toString()}
+                        toggleSelectedNodeID={toggleSelectedNodeID}
+                        selectedNodeID={selectedNodeID}
+                    />);
             });
         }
 

@@ -4,42 +4,55 @@ import {faMinus, faPlus} from "@fortawesome/free-solid-svg-icons";
 import "./TreeView.css";
 
 interface Node {
-    text: string;
+    name: string;
     id: number;
-    nodes: Node[];
+    nodes?: Node[];
 }
 
 interface TreeNodeProps {
     node: Node;
     level: number;
-    selectedNodeID?: number;
-    toggleSelectedNodeID: (id: number) => void;
+    selectedNode?: Node;
+    toggleSelectedNode: (node: Node) => void;
 }
 
 interface TreeViewProps {
     data: Node[];
+    onChangeSelectedNode: (node?:Node) => void;
+
 }
 
-export class TreeView extends React.Component<TreeViewProps, { selectedNodeID: number }> {
+export class TreeView extends React.Component<TreeViewProps, { selectedNode?: Node }> {
 
     constructor(props: TreeViewProps) {
         super(props);
-        this.state = {selectedNodeID: -1};
-        this.toggleSelectedNodeID = this.toggleSelectedNodeID.bind(this);
+        this.toggleSelectedNode = this.toggleSelectedNode.bind(this);
+        this.state = {selectedNode: undefined};
+        if (this.props.onChangeSelectedNode  ){
+            this.props.onChangeSelectedNode(undefined);
+        }
+
     }
 
-    toggleSelectedNodeID(id: number) {
-        if (this.state.selectedNodeID === id) {
-            this.setState({selectedNodeID: -1});
+    toggleSelectedNode(node: Node) {
+        if (this.state.selectedNode === node) {
+            this.setSelectedNode(undefined);
             return;
         }
-        this.setState({selectedNodeID: id});
+        this.setSelectedNode(node);
+    }
+
+    setSelectedNode(node?: Node){
+        if (this.props.onChangeSelectedNode && node !== this.state.selectedNode ){
+            this.props.onChangeSelectedNode(node);
+        }
+        this.setState({selectedNode: node});
     }
 
     render() {
-        let {selectedNodeID} = this.state;
+        let {selectedNode} = this.state;
         let children: React.ReactNode[] = [];
-        let toggleSelectedNodeID = this.toggleSelectedNodeID;
+        let toggleSelectedNode = this.toggleSelectedNode;
 
         this.props.data.forEach(function (node, index) {
             children.push(
@@ -47,8 +60,8 @@ export class TreeView extends React.Component<TreeViewProps, { selectedNodeID: n
                     node={node}
                     level={1}
                     key={'lev0_' + index.toString()}
-                    selectedNodeID={selectedNodeID}
-                    toggleSelectedNodeID={toggleSelectedNodeID}
+                    selectedNode={selectedNode}
+                    toggleSelectedNode={toggleSelectedNode}
                 />);
         });
 
@@ -77,24 +90,24 @@ class TreeNode extends React.Component<TreeNodeProps, { expanded: boolean }> {
     toggleExpanded(event: any) {
         this.setState({expanded: !this.state.expanded});
         const p = this.props;
-        if (p.selectedNodeID !== p.node.id){
-            p.toggleSelectedNodeID(p.node.id);
+        if (p.selectedNode !== p.node){
+            p.toggleSelectedNode(p.node);
         }
         event.stopPropagation();
     }
 
     toggleSelected(event: any) {
-        this.props.toggleSelectedNodeID(this.props.node.id);
+        this.props.toggleSelectedNode(this.props.node);
         event.stopPropagation();
     }
 
     render() {
 
-        const {node, level, selectedNodeID, toggleSelectedNodeID} = this.props;
+        const {node, level, selectedNode, toggleSelectedNode} = this.props;
         const {expanded} = this.state;
 
         let style: any = {color: '#428bca'};
-        if (node.id === selectedNodeID) {
+        if (node === selectedNode) {
             style = {
                 color: '#FFFFFF',
                 backgroundColor: '#428bca'
@@ -109,13 +122,13 @@ class TreeNode extends React.Component<TreeNodeProps, { expanded: boolean }> {
         }
 
         let expandCollapseIcon =
-            node.nodes.length === 0
+            !node.nodes
                 ? <span style={{margin: "0px 10px 0px 24px"}}/>
                 : <span onClick={this.toggleExpanded} style={{margin: "0px 10px"}}>
                     <FontAwesomeIcon icon={expanded ? faMinus : faPlus }/>
                 </span>;
 
-        let nodeText = <span>{node.text}</span>;
+        let nodeText = <span>{node.name}</span>;
 
         let result = [];
 
@@ -130,15 +143,15 @@ class TreeNode extends React.Component<TreeNodeProps, { expanded: boolean }> {
 
             </li>
         );
-        if (expanded) {
+        if (node.nodes && expanded) {
             node.nodes.forEach(function (node, index) {
                 result.push(
                     <TreeNode
                         node={node}
                         level={level + 1}
                         key={'lev' + level.toString() + '_' + index.toString()}
-                        toggleSelectedNodeID={toggleSelectedNodeID}
-                        selectedNodeID={selectedNodeID}
+                        toggleSelectedNode={toggleSelectedNode}
+                        selectedNode={selectedNode}
                     />);
             });
         }

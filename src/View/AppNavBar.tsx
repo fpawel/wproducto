@@ -10,7 +10,7 @@ import {LoginModal} from './LoginModal';
 export const AppNavBar = withRouter(props => {
     const {location} = props;
     return (
-        <Container>
+        <div>
             <LoginModal />
             <Navbar bg="primary" variant="dark">
                 <Navbar.Brand href="#/">Producto</Navbar.Brand>
@@ -23,7 +23,7 @@ export const AppNavBar = withRouter(props => {
                     <UserMenu/>
                 </Nav>
             </Navbar>
-        </Container>
+        </div>
     );
 });
 

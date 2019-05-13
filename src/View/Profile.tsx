@@ -10,78 +10,73 @@ const viewDescription = (text: string) =>
 ;
 
 const viewExn = (exn:any) =>
-    <Container>
-        <Alert variant='danger' style={{marginTop: "20px"}}>
-            <h2>Что-то пошло не так.</h2>
-            <p>{exn.text}</p>
-            <p>Попробуйте <Link to="/profile"> войти в личный кабинет </Link> ещё раз.
-            </p>
-        </Alert>
-    </Container>;
+    <Alert variant='danger' style={{marginTop: "20px"}}>
+        <h2>Что-то пошло не так.</h2>
+        <p>{exn.text}</p>
+        <p>Попробуйте <Link to="/profile"> войти в личный кабинет </Link> ещё раз.
+        </p>
+    </Alert>;
 
 const viewResult = (user: {name:string, email:string} ) =>
-    <Container>
-        <Jumbotron>
-            <h1
-                style={{
-                    fontSize: "34px",
-                    fontWeight: "bold",
-                }}
+    <Jumbotron>
+        <h1
+            style={{
+                fontSize: "34px",
+                fontWeight: "bold",
+            }}
 
-            >{user.name} </h1>
-            <hr/>
+        >{user.name} </h1>
+        <hr/>
 
-            {viewDescription('Сменить адрес электронной почты')}
+        {viewDescription('Сменить адрес электронной почты')}
 
-            <InputGroup className="mb-3">
-                <FormControl placeholder="Email" type="email" value={user.email} onChange={() => {}} />
-                <InputGroup.Append>
-                    <Button variant="outline-secondary">Отмена</Button>
-                    <Button variant="outline-secondary">Сохранить</Button>
-                </InputGroup.Append>
-            </InputGroup>
+        <InputGroup className="mb-3">
+            <FormControl placeholder="Email" type="email" value={user.email} onChange={() => {}} />
+            <InputGroup.Append>
+                <Button variant="outline-secondary">Отмена</Button>
+                <Button variant="outline-secondary">Сохранить</Button>
+            </InputGroup.Append>
+        </InputGroup>
 
-            {viewDescription('Сменить пароль')}
+        {viewDescription('Сменить пароль')}
 
-            <Form>
-                <Form.Group as={Row}>
-                    <Col sm={3}>
-                        <Form.Label>
-                            Новый пароль
-                        </Form.Label>
-                    </Col>
-                    <Col>
-                        <Form.Control type="password" placeholder="новый пароль"/>
-                    </Col>
-                </Form.Group>
+        <Form>
+            <Form.Group as={Row}>
+                <Col sm={3}>
+                    <Form.Label>
+                        Новый пароль
+                    </Form.Label>
+                </Col>
+                <Col>
+                    <Form.Control type="password" placeholder="новый пароль"/>
+                </Col>
+            </Form.Group>
 
-                <Form.Group as={Row}>
-                    <Col sm={3}>
-                        <Form.Label>
-                            Подтверждение нового пароля
-                        </Form.Label>
-                    </Col>
-                    <Col>
-                        <Form.Control type="password" placeholder="новый пароль ещё раз"/>
-                    </Col>
-                </Form.Group>
+            <Form.Group as={Row}>
+                <Col sm={3}>
+                    <Form.Label>
+                        Подтверждение нового пароля
+                    </Form.Label>
+                </Col>
+                <Col>
+                    <Form.Control type="password" placeholder="новый пароль ещё раз"/>
+                </Col>
+            </Form.Group>
 
-                <Form.Group as={Row}>
-                    <Col sm={3}>
-                        <Form.Label>
-                            Старый пароль
-                        </Form.Label>
-                    </Col>
-                    <Col>
-                        <Form.Control type="password" placeholder="старый пароль"/>
-                    </Col>
-                </Form.Group>
-            </Form>
+            <Form.Group as={Row}>
+                <Col sm={3}>
+                    <Form.Label>
+                        Старый пароль
+                    </Form.Label>
+                </Col>
+                <Col>
+                    <Form.Control type="password" placeholder="старый пароль"/>
+                </Col>
+            </Form.Group>
+        </Form>
 
 
-        </Jumbotron>
-
-    </Container>;
+    </Jumbotron>;
 
 
 
@@ -117,73 +112,70 @@ class ProfileDecorated extends React.Component<{}, {email:string}> {
 
 
         return (
-            <Container>
-                <Jumbotron>
-                    <h1
-                        style={{
-                            fontSize: "34px",
-                            fontWeight: "bold",
-                        }}
+            <Jumbotron>
+                <h1
+                    style={{
+                        fontSize: "34px",
+                        fontWeight: "bold",
+                    }}
 
-                    >{appState.auth.name} </h1>
-                    <hr/>
+                >{appState.auth.name} </h1>
+                <hr/>
 
-                    {viewDescription('Сменить адрес электронной почты')}
+                {viewDescription('Сменить адрес электронной почты')}
 
-                    <InputGroup className="mb-3">
-                        <FormControl placeholder="Email" type="email" value={email} onChange={handleInputEmail} />
+                <InputGroup className="mb-3">
+                    <FormControl placeholder="Email" type="email" value={email} onChange={handleInputEmail} />
 
-                        { emailChanged ?
-                            <InputGroup.Append>
-                                <Button variant="outline-secondary" onClick={resetEmail} >Отмена</Button>
-                                <Button variant="outline-secondary">Сохранить</Button>
-                            </InputGroup.Append>
-                            : null
-                        }
+                    { emailChanged ?
+                        <InputGroup.Append>
+                            <Button variant="outline-secondary" onClick={resetEmail} >Отмена</Button>
+                            <Button variant="outline-secondary">Сохранить</Button>
+                        </InputGroup.Append>
+                        : null
+                    }
 
-                    </InputGroup>
+                </InputGroup>
 
-                    {viewDescription('Сменить пароль')}
+                {viewDescription('Сменить пароль')}
 
-                    <Form>
-                        <Form.Group as={Row}>
-                            <Col sm={3}>
-                                <Form.Label>
-                                    Новый пароль
-                                </Form.Label>
-                            </Col>
-                            <Col>
-                                <Form.Control type="password" placeholder="новый пароль"/>
-                            </Col>
-                        </Form.Group>
+                <Form>
+                    <Form.Group as={Row}>
+                        <Col sm={3}>
+                            <Form.Label>
+                                Новый пароль
+                            </Form.Label>
+                        </Col>
+                        <Col>
+                            <Form.Control type="password" placeholder="новый пароль"/>
+                        </Col>
+                    </Form.Group>
 
-                        <Form.Group as={Row}>
-                            <Col sm={3}>
-                                <Form.Label>
-                                    Подтверждение нового пароля
-                                </Form.Label>
-                            </Col>
-                            <Col>
-                                <Form.Control type="password" placeholder="новый пароль ещё раз"/>
-                            </Col>
-                        </Form.Group>
+                    <Form.Group as={Row}>
+                        <Col sm={3}>
+                            <Form.Label>
+                                Подтверждение нового пароля
+                            </Form.Label>
+                        </Col>
+                        <Col>
+                            <Form.Control type="password" placeholder="новый пароль ещё раз"/>
+                        </Col>
+                    </Form.Group>
 
-                        <Form.Group as={Row}>
-                            <Col sm={3}>
-                                <Form.Label>
-                                    Старый пароль
-                                </Form.Label>
-                            </Col>
-                            <Col>
-                                <Form.Control type="password" placeholder="старый пароль"/>
-                            </Col>
-                        </Form.Group>
-                    </Form>
+                    <Form.Group as={Row}>
+                        <Col sm={3}>
+                            <Form.Label>
+                                Старый пароль
+                            </Form.Label>
+                        </Col>
+                        <Col>
+                            <Form.Control type="password" placeholder="старый пароль"/>
+                        </Col>
+                    </Form.Group>
+                </Form>
 
 
-                </Jumbotron>
-
-            </Container>
+            </Jumbotron>
         );
     }
 }

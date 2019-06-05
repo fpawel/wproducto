@@ -11,14 +11,14 @@ function productRow(p: Product, hasLevel5: boolean, hasInRecycleBin:boolean) {
 
     let productInRecycleBin = recycleBin.hasProductID(p.id);
 
+    let count = 0;
+    if (hasInRecycleBin){
+        count = recycleBin.count(p.id);
+    }
+
 
     return (
         <tr key={p.id}>
-            <td style={{padding: '0px'}}>
-                <Button variant="link" onClick={() => recycleBin.addProduct(p)}>
-                    <FontAwesomeIcon icon={faPlus}/>
-                </Button>
-            </td>
 
             <td style={{padding: '0px'}}>
                 <Button variant="link" onClick={() => recycleBin.addProduct(p)}>
@@ -50,6 +50,12 @@ function productRow(p: Product, hasLevel5: boolean, hasInRecycleBin:boolean) {
             <td>
                 {p.name}
             </td>
+
+            { hasInRecycleBin ?
+                <td>
+                    { count === 0 ? null : `${count} штук` }
+                </td> : null
+            }
 
             { hasInRecycleBin ?
                 <td>
@@ -97,7 +103,7 @@ class selectedProducts extends React.Component {
 
         return <div>
             <h2>Наши товары</h2>
-            <Table striped bordered hover responsive>
+            <Table bordered >
                 <tbody>
                 {
                     selectedProductsState.products.map((p) => productRow(p, hasLevel5, hasInRecycleBin))

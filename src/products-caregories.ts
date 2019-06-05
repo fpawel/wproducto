@@ -1,4 +1,4 @@
-import {action, observable, computed} from 'mobx'
+import {action, observable,} from 'mobx'
 import './AppKey.ts'
 
 const recycleBinProductsKey = "wproducto.recycleBinProducts";
@@ -22,13 +22,22 @@ export type RecycleBinProduct = Product & {count:number};
 class RecycleBin {
     @observable products: RecycleBinProduct[] = restoreRecycleBinProducts();
 
-    @computed hasProductID(productID: number){
+    hasProductID(productID: number){
         for (let p of this.products) {
             if(p.id === productID){
                 return true;
             }
         }
         return false;
+    }
+
+    count(productID: number){
+        for (let p of this.products) {
+            if(p.id === productID){
+                return p.count;
+            }
+        }
+        return 0;
     }
 
     @action
@@ -113,12 +122,6 @@ interface CategoriesNode {
 }
 
 type Node = CategoriesNode | ProductsNode | Product;
-
-
-function getProductsOfNode(nodeAny: any) {
-    let node = <ProductsNode>nodeAny;
-    return node.products;
-}
 
 export const productsCategoriesTree: Node[] =
     [

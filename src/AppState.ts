@@ -45,7 +45,7 @@ class AppState {
     }
 
     async fetchProfile() {
-        let response = await this.jsonrpc2("Auth.Profile", [localStorage.getItem(AppKey.token)]);
+        let response = await this.jsonrpc2("Auth.Profile", [localStorage.getItem(AppKey.tokenKey)]);
         if (response.type === 'result') {
             appState.setAuth({type: 'user', name: response.result.Name, email: response.result.Email})
         } else {
@@ -56,7 +56,7 @@ class AppState {
     async login(params : { name: string, pass: string }){
         let response = await this.jsonrpc2("Auth.Login", params);
         if (response.type === "result") {
-            localStorage.setItem(AppKey.token, response.result);
+            localStorage.setItem(AppKey.tokenKey, response.result);
             await this.fetchProfile()
         }
         return response;
@@ -72,7 +72,7 @@ class AppState {
             role: "regular_user",
         });
         if (response.type === "result") {
-            localStorage.setItem(AppKey.token, response.result);
+            localStorage.setItem(AppKey.tokenKey, response.result);
         }
         return response;
     }
@@ -134,19 +134,3 @@ class AppState {
 }
 
 export const appState = new AppState();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

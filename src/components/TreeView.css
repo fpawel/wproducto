@@ -3,6 +3,10 @@
 	cursor: pointer;
 }
 
+.list-group-item {
+	white-space: nowrap;
+}
+
 .treeview span {
 	width: 1rem;
 	height: 1rem;

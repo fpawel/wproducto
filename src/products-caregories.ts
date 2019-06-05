@@ -1,71 +1,148 @@
-import {action, observable} from 'mobx'
+import {action, observable, computed} from 'mobx'
+import './AppKey.ts'
+
+const recycleBinProductsKey = "wproducto.recycleBinProducts";
 
 class SelectedProductsState {
-    @observable products: Product[] = [];
+    @observable products: Product[] = restoreRecycleBinProducts();
 
     @action
     setSelectedProducts(anyNode: any) {
-        if (!anyNode || anyNode.level < 2){
-            this.products = [];
+        let node = <Node>anyNode;
+        if (node && node.type === "products") {
+            this.products = node.products;
             return;
         }
-        this.products = anyNode.products;
+        this.products = [];
     }
 }
 
+export type RecycleBinProduct = Product & {count:number};
+
+class RecycleBin {
+    @observable products: RecycleBinProduct[] = restoreRecycleBinProducts();
+
+    @computed hasProductID(productID: number){
+        for (let p of this.products) {
+            if(p.id === productID){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @action
+    removeProductID(productID: number) {
+        this.products = this.products.filter((p) => {
+            return p.id !== productID;
+        });
+        this.store();
+    }
+
+    @action
+    reduceProductCount(productID: number) {
+        for (let p of this.products) {
+            if(p.id === productID){
+                if (p.count > 1) {
+                    p.count -= 1;
+                } else {
+                    this.products = this.products.filter((p) => {
+                        return p.id !== productID;
+                    });
+                }
+            }
+        }
+        this.store();
+    }
+
+    @action
+    addProduct(product: Product) {
+        for (let p of this.products) {
+            if(p.id === product.id){
+                p.count += 1;
+                this.store();
+                return;
+            }
+        }
+        this.products.push({ count:1, ...product});
+        this.store();
+    }
+
+    store() {
+        localStorage.setItem(recycleBinProductsKey, JSON.stringify(this.products));
+    }
+}
+
+
+function restoreRecycleBinProducts() {
+    let s = localStorage.getItem(recycleBinProductsKey);
+    if (s) {
+        return <RecycleBinProduct[]>JSON.parse(s);
+    }
+    return [];
+}
+
+export const recycleBin = new RecycleBin();
+
 export const selectedProductsState = new SelectedProductsState();
 
-interface Product {
+export interface Product {
     id: number;
-    name2: string;
+    name: string;
     level4: string;
     level5: string;
     level6: string;
     level7: string;
+    type: "product";
 }
 
-interface ProductNode {
-    name:string;
-    id:number;
-    level:number;
+interface ProductsNode {
+    name: string;
+    id: number;
+    level: number;
+    type: "products";
     products: Product [];
 }
 
-type Node = {
-    name:string;
-    id:number;
-    level:number;
+interface CategoriesNode {
+    name: string;
+    id: number;
+    level: number;
+    type: "nodes";
     nodes: Node[];
-} | ProductNode;
+}
+
+type Node = CategoriesNode | ProductsNode | Product;
 
 
-function getProductsOfNode(nodeAny:any){
-    let node = <ProductNode> nodeAny;
+function getProductsOfNode(nodeAny: any) {
+    let node = <ProductsNode>nodeAny;
     return node.products;
 }
 
-
-
-export const productsCategoriesTree : Node[]=
+export const productsCategoriesTree: Node[] =
     [
         {
             "id": 1,
             "name": "Детское Питание и Напитки",
             "level": 0,
+            type: "nodes",
             "nodes": [
                 {
                     "id": 2,
                     "name": "Детские Соки и Напитки",
                     "level": 1,
+                    type: "nodes",
                     "nodes": [
                         {
                             "id": 3,
                             "name": "Детские Соки",
                             "level": 2,
+                            type: "products",
                             "products": [
                                 {
                                     "id": 4,
-                                    "name2": "ДП Сок дет Агуша мультифр 200мл МЮ 3Х 6Х",
+                                    type: "product", "name": "ДП Сок дет Агуша мультифр 200мл МЮ 3Х 6Х",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -73,7 +150,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 5,
-                                    "name2": "ДП Сок дет Агуша яб-виш 200мл ТВАВ 3Х 6Х МЮ",
+                                    type: "product", "name": "ДП Сок дет Агуша яб-виш 200мл ТВАВ 3Х 6Х МЮ",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ВИШНЯ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -81,7 +158,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 6,
-                                    "name2": "ДП Сок дет Агуша яб-виш 200мл х3 х9 ТВАВ МЮ",
+                                    type: "product", "name": "ДП Сок дет Агуша яб-виш 200мл х3 х9 ТВАВ МЮ",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ВИШНЯ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -89,7 +166,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 7,
-                                    "name2": "ДП Сок дет Агуша Ябл-банан 200мл ТВА 3Х 6Х МЮ",
+                                    type: "product", "name": "ДП Сок дет Агуша Ябл-банан 200мл ТВА 3Х 6Х МЮ",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -97,7 +174,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 8,
-                                    "name2": "ДП Сок дет Агуша Ябл-шиповн 200мл ТBA 3Х 6Х МЮ",
+                                    type: "product", "name": "ДП Сок дет Агуша Ябл-шиповн 200мл ТBA 3Х 6Х МЮ",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ШИПОВНИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -105,7 +182,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 9,
-                                    "name2": "ДП Сок дет с мяк Агуша мультифр 0% 1х27х200мл TBA",
+                                    type: "product", "name": "ДП Сок дет с мяк Агуша мультифр 0% 1х27х200мл TBA",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -113,7 +190,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 10,
-                                    "name2": "ДП Сок дет с мяк Агуша ябл-груша 200мл х27 ТВАВ",
+                                    type: "product", "name": "ДП Сок дет с мяк Агуша ябл-груша 200мл х27 ТВАВ",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -121,7 +198,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 11,
-                                    "name2": "ДП Сок дет с мяк Агуша Яблоко 200мл ТВА 3Х 6Х МЮ",
+                                    type: "product", "name": "ДП Сок дет с мяк Агуша Яблоко 200мл ТВА 3Х 6Х МЮ",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -129,7 +206,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 12,
-                                    "name2": "ДП Сок дет. с мяк.Агуша Ябл-банан 1х15х500мл CBC",
+                                    type: "product", "name": "ДП Сок дет. с мяк.Агуша Ябл-банан 1х15х500мл CBC",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -137,7 +214,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 13,
-                                    "name2": "ДП Сок детский осв Агуша Груша 150мл бут.ст 12Х",
+                                    type: "product", "name": "ДП Сок детский осв Агуша Груша 150мл бут.ст 12Х",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТЕКЛЯННАЯ БУТЫЛКА",
@@ -145,7 +222,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 14,
-                                    "name2": "ДП Сок осветл Агуша Груша 200мл TBAВ 3Х 6Х МЮ",
+                                    type: "product", "name": "ДП Сок осветл Агуша Груша 200мл TBAВ 3Х 6Х МЮ",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -153,7 +230,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 15,
-                                    "name2": "ДП Сок с мяк Агуша ябл-пер 200мл TBA 3Х 6Х МЮ",
+                                    type: "product", "name": "ДП Сок с мяк Агуша ябл-пер 200мл TBA 3Х 6Х МЮ",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -161,7 +238,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 16,
-                                    "name2": "Сок Агуша Груша Осв 150мл х12 СБт ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 150мл х12 СБт ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТЕКЛЯННАЯ БУТЫЛКА",
@@ -169,7 +246,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 17,
-                                    "name2": "Сок Агуша Груша Осв 150мл х12 СБт ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 150мл х12 СБт ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТЕКЛЯННАЯ БУТЫЛКА",
@@ -177,7 +254,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 18,
-                                    "name2": "Сок Агуша Груша Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -185,7 +262,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 19,
-                                    "name2": "Сок Агуша Груша Осв 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Груша Осв 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -193,7 +270,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 20,
-                                    "name2": "Сок Агуша Груша Осв 200мл х3 х9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 200мл х3 х9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -201,7 +278,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 21,
-                                    "name2": "Сок Агуша Груша Осв 200мл х3 х9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 200мл х3 х9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -209,7 +286,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 22,
-                                    "name2": "Сок Агуша Груша Осв 500г х15 КБК ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 500г х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -217,7 +294,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 23,
-                                    "name2": "Сок Агуша Груша Осв 500мл х15 КБК ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -225,7 +302,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 24,
-                                    "name2": "Сок Агуша Груша Осв 500мл х3 х5 КБК МП ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 500мл х3 х5 КБК МП ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -233,7 +310,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 25,
-                                    "name2": "Сок Агуша МультФр Мяк 200мл х 3 х 9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша МультФр Мяк 200мл х 3 х 9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -241,7 +318,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 26,
-                                    "name2": "Сок Агуша МультФр Мяк 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша МультФр Мяк 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -249,7 +326,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 27,
-                                    "name2": "Сок Агуша МультФр Мяк 500мл х3 х5 КБК МП ДП",
+                                    type: "product", "name": "Сок Агуша МультФр Мяк 500мл х3 х5 КБК МП ДП",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -257,7 +334,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 28,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -265,7 +342,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 29,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -273,7 +350,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 30,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -281,7 +358,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 31,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП Промо",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -289,7 +366,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 32,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -297,7 +374,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 33,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 200мл х3 х9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 200мл х3 х9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -305,7 +382,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 34,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 500мл х15 КБК ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -313,7 +390,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 35,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 500мл х3 х5 КБК МП ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 500мл х3 х5 КБК МП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -321,7 +398,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 36,
-                                    "name2": "Сок Агуша Ябл Виноград Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Виноград Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ВИНОГРАД И ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -329,7 +406,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 37,
-                                    "name2": "Сок Агуша Ябл Виноград Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Виноград Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ВИНОГРАД И ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -337,7 +414,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 38,
-                                    "name2": "Сок Агуша Ябл Виноград Осв 200мл х27 БЗ ДП Промо",
+                                    type: "product", "name": "Сок Агуша Ябл Виноград Осв 200мл х27 БЗ ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ВИНОГРАД И ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -345,7 +422,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 39,
-                                    "name2": "Сок Агуша Ябл Виноград Осв 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Ябл Виноград Осв 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ВИНОГРАД И ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -353,7 +430,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 40,
-                                    "name2": "Сок Агуша Ябл Вишня Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Вишня Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ВИШНЯ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -361,7 +438,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 41,
-                                    "name2": "Сок Агуша Ябл Вишня Осв 200мл х27 БЗ ДП Промо",
+                                    type: "product", "name": "Сок Агуша Ябл Вишня Осв 200мл х27 БЗ ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ВИШНЯ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -369,7 +446,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 42,
-                                    "name2": "Сок Агуша Ябл Вишня Осв 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Ябл Вишня Осв 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ВИШНЯ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -377,7 +454,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 43,
-                                    "name2": "Сок Агуша Ябл Груша Осв 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Ябл Груша Осв 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -385,7 +462,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 44,
-                                    "name2": "Сок Агуша Ябл Персик Мяк 200мл х 3 х 9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Персик Мяк 200мл х 3 х 9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -393,7 +470,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 45,
-                                    "name2": "Сок Агуша Ябл Персик Мяк 200мл х 3 х 9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Персик Мяк 200мл х 3 х 9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -401,7 +478,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 46,
-                                    "name2": "Сок Агуша Ябл Персик Мяк 200мл х27 БЗ ДП Промо",
+                                    type: "product", "name": "Сок Агуша Ябл Персик Мяк 200мл х27 БЗ ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -409,7 +486,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 47,
-                                    "name2": "Сок Агуша Ябл Персик Мяк 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Ябл Персик Мяк 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -417,7 +494,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 48,
-                                    "name2": "Сок Агуша Ябл Персик Мяк 500мл х15 КБК ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Персик Мяк 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -425,7 +502,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 49,
-                                    "name2": "Сок Агуша Ябл Персик Мяк 500мл х15 КБК ДП Промо",
+                                    type: "product", "name": "Сок Агуша Ябл Персик Мяк 500мл х15 КБК ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -433,7 +510,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 50,
-                                    "name2": "Сок Агуша Ябл Шиповник 150мл х12 СБт ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Шиповник 150мл х12 СБт ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ШИПОВНИК",
                                     "level6": "СТЕКЛЯННАЯ БУТЫЛКА",
@@ -441,7 +518,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 51,
-                                    "name2": "Сок Агуша Ябл Шиповник 200мл х27 БЗ ДП Промо",
+                                    type: "product", "name": "Сок Агуша Ябл Шиповник 200мл х27 БЗ ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ШИПОВНИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -449,7 +526,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 52,
-                                    "name2": "Сок Агуша Ябл Шиповник 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Ябл Шиповник 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ШИПОВНИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -457,7 +534,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 53,
-                                    "name2": "Сок Агуша Ябл Шиповник 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Ябл Шиповник 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ШИПОВНИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -465,7 +542,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 54,
-                                    "name2": "Сок Агуша Ябл Шиповник 200мл х3 х9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Шиповник 200мл х3 х9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ШИПОВНИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -473,7 +550,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 55,
-                                    "name2": "Сок Агуша Яблоко Мяк 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Мяк 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -481,7 +558,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 56,
-                                    "name2": "Сок Агуша Яблоко Мяк 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Мяк 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -489,7 +566,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 57,
-                                    "name2": "Сок Агуша Яблоко Мяк 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Мяк 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -497,7 +574,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 58,
-                                    "name2": "Сок Агуша Яблоко Мяк 200мл х27 БЗ ДП СГР",
+                                    type: "product", "name": "Сок Агуша Яблоко Мяк 200мл х27 БЗ ДП СГР",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -505,7 +582,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 59,
-                                    "name2": "Сок Агуша Яблоко Мяк 200мл х3 х9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Мяк 200мл х3 х9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -513,7 +590,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 60,
-                                    "name2": "Сок Агуша Яблоко Мяк 200мл х3 х9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Мяк 200мл х3 х9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -521,7 +598,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 61,
-                                    "name2": "Сок Агуша Яблоко Осв 150мл х12 СБт ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 150мл х12 СБт ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БУТЫЛКА",
@@ -529,7 +606,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 62,
-                                    "name2": "Сок Агуша Яблоко Осв 200мл х 3 х 9 МП БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 200мл х 3 х 9 МП БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -537,7 +614,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 63,
-                                    "name2": "Сок Агуша Яблоко Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -545,7 +622,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 64,
-                                    "name2": "Сок Агуша Яблоко Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -553,7 +630,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 65,
-                                    "name2": "Сок Агуша Яблоко Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -561,7 +638,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 66,
-                                    "name2": "Сок Агуша Яблоко Осв 200мл х27 БЗ ДП Промо",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 200мл х27 БЗ ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -569,7 +646,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 67,
-                                    "name2": "Сок Агуша Яблоко Осв 500мл х15 КБК ДП Промо",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 500мл х15 КБК ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -577,7 +654,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 68,
-                                    "name2": "Сок Агуша Яблоко Осв 500мл х3 х5 КБК МП ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 500мл х3 х5 КБК МП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -585,7 +662,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 69,
-                                    "name2": "Сок дет осв Агуша Яблоко 200мл ТВАВ 3Х 6Х МЮ",
+                                    type: "product", "name": "Сок дет осв Агуша Яблоко 200мл ТВАВ 3Х 6Х МЮ",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -593,7 +670,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 70,
-                                    "name2": "Сок дет осветл Агуша яб 0% 1х12х150мл Бут ст",
+                                    type: "product", "name": "Сок дет осветл Агуша яб 0% 1х12х150мл Бут ст",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БУТЫЛКА",
@@ -601,7 +678,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 71,
-                                    "name2": "Сок детс освет Агуша Груша 200мл 3Х 6Х TBAВ МЮ",
+                                    type: "product", "name": "Сок детс освет Агуша Груша 200мл 3Х 6Х TBAВ МЮ",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -609,7 +686,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 72,
-                                    "name2": "Сок детс с мяк Агуша Яблоко-Абрикос 200мл х27 ТВАВ",
+                                    type: "product", "name": "Сок детс с мяк Агуша Яблоко-Абрикос 200мл х27 ТВАВ",
                                     "level4": "АГУША",
                                     "level5": "АБРИКОС-ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -617,7 +694,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 73,
-                                    "name2": "ДП Сок Агуша Груша Осв 200мл TBAB 18Х",
+                                    type: "product", "name": "ДП Сок Агуша Груша Осв 200мл TBAB 18Х",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -625,7 +702,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 74,
-                                    "name2": "ДП Сок Агуша Ябл Груша Осв 200мл ТВАВ 18Х",
+                                    type: "product", "name": "ДП Сок Агуша Ябл Груша Осв 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -633,7 +710,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 75,
-                                    "name2": "ДП Сок дет мяк Агуша ябл-груша 200мл ТВАВ 18Х",
+                                    type: "product", "name": "ДП Сок дет мяк Агуша ябл-груша 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -641,7 +718,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 76,
-                                    "name2": "ДП Сок дет осв Агуша ябл-виногр 200мл ТВАВ 18Х",
+                                    type: "product", "name": "ДП Сок дет осв Агуша ябл-виногр 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ВИНОГРАД И ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -649,7 +726,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 77,
-                                    "name2": "ДП Сок дет с мяк Агуша ябл-банан 200мл ТВА 18Х",
+                                    type: "product", "name": "ДП Сок дет с мяк Агуша ябл-банан 200мл ТВА 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -657,7 +734,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 78,
-                                    "name2": "ДП Сок детск освет Агуша Груша 500мл CbC 15Х",
+                                    type: "product", "name": "ДП Сок детск освет Агуша Груша 500мл CbC 15Х",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -665,7 +742,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 79,
-                                    "name2": "ДП Сок детск с мяк Агуша Яблоко 200мл ТВА 18Х",
+                                    type: "product", "name": "ДП Сок детск с мяк Агуша Яблоко 200мл ТВА 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -673,7 +750,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 80,
-                                    "name2": "ДП Сок осветл Агуша Яблоко 200мл TBAB 18Х",
+                                    type: "product", "name": "ДП Сок осветл Агуша Яблоко 200мл TBAB 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -681,7 +758,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 81,
-                                    "name2": "ДП Сок с мяк Агуша Мультифрукт 200мл ТВАВ 18Х",
+                                    type: "product", "name": "ДП Сок с мяк Агуша Мультифрукт 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -689,7 +766,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 82,
-                                    "name2": "ДП Сок с мяк Агуша ябл-персик 200мл ТВАВ 18Х",
+                                    type: "product", "name": "ДП Сок с мяк Агуша ябл-персик 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -697,7 +774,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 83,
-                                    "name2": "Сок Агуша Груша Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Груша Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -705,7 +782,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 84,
-                                    "name2": "Сок Агуша МультФр Мяк 500мл х15 КБК ДП",
+                                    type: "product", "name": "Сок Агуша МультФр Мяк 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -713,7 +790,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 85,
-                                    "name2": "Сок Агуша Ябл Банан Мяк 500мл х15 КБК ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Банан Мяк 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -721,7 +798,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 86,
-                                    "name2": "Сок Агуша Ябл Вишня Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Вишня Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ВИШНЯ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -729,7 +806,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 87,
-                                    "name2": "Сок Агуша Ябл Груша Осв 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Груша Осв 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -737,7 +814,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 88,
-                                    "name2": "Сок Агуша Ябл Персик Мяк 0.2л х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Персик Мяк 0.2л х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -745,7 +822,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 89,
-                                    "name2": "Сок Агуша Ябл Персик Мяк 500мл х15 КБК ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Персик Мяк 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -753,7 +830,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 90,
-                                    "name2": "Сок Агуша Ябл Шиповник 200мл х27 БЗ ДП",
+                                    type: "product", "name": "Сок Агуша Ябл Шиповник 200мл х27 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ШИПОВНИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -761,7 +838,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 91,
-                                    "name2": "Сок Агуша Яблоко Осв 500мл х15 КБК ДП",
+                                    type: "product", "name": "Сок Агуша Яблоко Осв 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -769,7 +846,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 92,
-                                    "name2": "Сок дет Агуша яблоко-вишня 200мл ТВАВ 18Х",
+                                    type: "product", "name": "Сок дет Агуша яблоко-вишня 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ВИШНЯ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -777,7 +854,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 93,
-                                    "name2": "Сок дет Агуша яблоко-шиповник 200мл ТВАВ 18Х",
+                                    type: "product", "name": "Сок дет Агуша яблоко-шиповник 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ШИПОВНИК",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -785,7 +862,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 94,
-                                    "name2": "Сок детс освет Агуша Груша 200мл ТВАВ 18Х",
+                                    type: "product", "name": "Сок детс освет Агуша Груша 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -793,7 +870,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 95,
-                                    "name2": "Сок детс с мяк Агуша Яблоко-Абрикос 200мл ТВАВ 18Х",
+                                    type: "product", "name": "Сок детс с мяк Агуша Яблоко-Абрикос 200мл ТВАВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "АБРИКОС-ЯБЛОКО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -801,7 +878,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 96,
-                                    "name2": "Сок с мяк Агуша Ябл-груш для кормящ 500мл СЛ 24Х",
+                                    type: "product", "name": "Сок с мяк Агуша Ябл-груш для кормящ 500мл СЛ 24Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ГРУША С МЯКОТЬЮ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -809,7 +886,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 97,
-                                    "name2": "Сок с мяк Агуша Ябл-груш для кормящ 500мл х15 CbC",
+                                    type: "product", "name": "Сок с мяк Агуша Ябл-груш для кормящ 500мл х15 CbC",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -817,7 +894,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 98,
-                                    "name2": "Сок с мяк Агуша Яблоко для кормящ 500мл Sl 24Х",
+                                    type: "product", "name": "Сок с мяк Агуша Яблоко для кормящ 500мл Sl 24Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО С МЯКОТЬЮ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -825,7 +902,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 99,
-                                    "name2": "Сок с мякот Агуша Яблоко для берем 500мл х15 CbC",
+                                    type: "product", "name": "Сок с мякот Агуша Яблоко для берем 500мл х15 CbC",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -833,7 +910,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 100,
-                                    "name2": "Сок с мякот Агуша Яблоко для кормящ 500мл х15 CbC",
+                                    type: "product", "name": "Сок с мякот Агуша Яблоко для кормящ 500мл х15 CbC",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -841,7 +918,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 101,
-                                    "name2": "Сок с мякотью Агуша Яблоко для берем 500мл Sl 24Х",
+                                    type: "product", "name": "Сок с мякотью Агуша Яблоко для берем 500мл Sl 24Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО С МЯКОТЬЮ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -853,10 +930,11 @@ export const productsCategoriesTree : Node[]=
                             "id": 102,
                             "name": "Компоты И Морсы",
                             "level": 2,
+                            type: "products",
                             "products": [
                                 {
                                     "id": 103,
-                                    "name2": "Компот Агуша Я САМ! клуб-яб-ч.ряб 1х15х500мл CbC",
+                                    type: "product", "name": "Компот Агуша Я САМ! клуб-яб-ч.ряб 1х15х500мл CbC",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО-КЛУБНИКА-РЯБИНА ЧЕРНОПЛОДНАЯ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -864,7 +942,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 104,
-                                    "name2": "Морс Агуша Я САМ! яг сбор 0% 1х15х200мл CbC",
+                                    type: "product", "name": "Морс Агуша Я САМ! яг сбор 0% 1х15х200мл CbC",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -872,7 +950,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 105,
-                                    "name2": "Морс Агуша Я САМ! Ягодный сбор 1х15х500мл CombiBC",
+                                    type: "product", "name": "Морс Агуша Я САМ! Ягодный сбор 1х15х500мл CombiBC",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -880,7 +958,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 106,
-                                    "name2": "Морс Агуша Ягодный Сбор 200мл х3 х5 КБК МП ДП",
+                                    type: "product", "name": "Морс Агуша Ягодный Сбор 200мл х3 х5 КБК МП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -888,7 +966,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 107,
-                                    "name2": "Морс Агуша Ягодный Сбор 500мл х3 х5 КБК МП ДП",
+                                    type: "product", "name": "Морс Агуша Ягодный Сбор 500мл х3 х5 КБК МП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -896,7 +974,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 108,
-                                    "name2": "Нап сокс Агуша КомпПр КлубЯблЧРяб200млх3х5КБК МПДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр КлубЯблЧРяб200млх3х5КБК МПДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-КЛУБНИКА-РЯБИНА ЧЕРНОПЛОДНАЯ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -904,7 +982,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 109,
-                                    "name2": "Нап сокс Агуша КомпПр КлубЯблЧРяб500млх3х5КБК МПДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр КлубЯблЧРяб500млх3х5КБК МПДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-КЛУБНИКА-РЯБИНА ЧЕРНОПЛОДНАЯ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -912,7 +990,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 110,
-                                    "name2": "Нап сокс Агуша КомпПр ЯблКурИзюм 200млх3х5КБКМП ДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр ЯблКурИзюм 200млх3х5КБКМП ДП",
                                     "level4": "АГУША",
                                     "level5": "КУРАГА-ИЗЮМ-ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -920,7 +998,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 111,
-                                    "name2": "Нап сокс Агуша КомпПр ЯблКурИзюм 500мл х15 КБК ДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр ЯблКурИзюм 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "КУРАГА-ИЗЮМ-ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -928,7 +1006,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 112,
-                                    "name2": "Нап сокс Агуша КомпПр ЯблКурИзюм 500млх3х5КБКМПДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр ЯблКурИзюм 500млх3х5КБКМПДП",
                                     "level4": "АГУША",
                                     "level5": "КУРАГА-ИЗЮМ-ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -936,7 +1014,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 113,
-                                    "name2": "Нап соксАгушаЯСамКомпПрЯблКлубЧРяб200млх3х5КБКМПДП",
+                                    type: "product", "name": "Нап соксАгушаЯСамКомпПрЯблКлубЧРяб200млх3х5КБКМПДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО-КЛУБНИКА-РЯБИНА ЧЕРНОПЛОДНАЯ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -944,7 +1022,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 114,
-                                    "name2": "Напит сокосод Агуша кур-изюм-яб 0% 1х15х200мл CbC",
+                                    type: "product", "name": "Напит сокосод Агуша кур-изюм-яб 0% 1х15х200мл CbC",
                                     "level4": "АГУША",
                                     "level5": "КУРАГА-ИЗЮМ-ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -952,7 +1030,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 115,
-                                    "name2": "Морс Агуша Ягодный Сбор 200мл х15 КБК ДП",
+                                    type: "product", "name": "Морс Агуша Ягодный Сбор 200мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -960,7 +1038,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 116,
-                                    "name2": "Морс Агуша Ягодный Сбор 500мл х15 КБК ДП",
+                                    type: "product", "name": "Морс Агуша Ягодный Сбор 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -968,7 +1046,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 117,
-                                    "name2": "Нап сокс Агуша КомпПр Клуб Ябл ЧРяб200мл х15КБК ДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр Клуб Ябл ЧРяб200мл х15КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-КЛУБНИКА-РЯБИНА ЧЕРНОПЛОДНАЯ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -976,7 +1054,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 118,
-                                    "name2": "Нап сокс Агуша КомпПр КлубЯблЧРяб 500мл х15 КБК ДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр КлубЯблЧРяб 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-КЛУБНИКА-РЯБИНА ЧЕРНОПЛОДНАЯ",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -984,7 +1062,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 119,
-                                    "name2": "Нап сокс Агуша КомпПр ЯблКурИзюм 200мл х15 КБК ДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр ЯблКурИзюм 200мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "КУРАГА-ИЗЮМ-ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -992,7 +1070,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 120,
-                                    "name2": "Нап сокс Агуша КомпПр ЯблКурИзюм 500мл х15 КБК ДП",
+                                    type: "product", "name": "Нап сокс Агуша КомпПр ЯблКурИзюм 500мл х15 КБК ДП",
                                     "level4": "АГУША",
                                     "level5": "КУРАГА-ИЗЮМ-ЯБЛОКО",
                                     "level6": "КОМБИБЛОК КОМПАКТ",
@@ -1003,11 +1081,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 121,
                             "name": "Сокосодержащие Напитки",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 122,
-                                    "name2": "ДП Вода и сок Агуша Яблоко 300мл х6 БП",
+                                    type: "product", "name": "ДП Вода и сок Агуша Яблоко 300мл х6 БП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ПЭТ",
@@ -1015,7 +1093,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 123,
-                                    "name2": "ДП Вода и сок Агуша Ягоды сад 300мл х6 БП",
+                                    type: "product", "name": "ДП Вода и сок Агуша Ягоды сад 300мл х6 БП",
                                     "level4": "АГУША",
                                     "level5": "САДОВЫЕ ЯГОДЫ",
                                     "level6": "ПЭТ",
@@ -1023,7 +1101,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 124,
-                                    "name2": "ДП НапСокосод Агуша Ябл-Виногр 300мл БП 6Х",
+                                    type: "product", "name": "ДП НапСокосод Агуша Ябл-Виногр 300мл БП 6Х",
                                     "level4": "АГУША",
                                     "level5": "ВИНОГРАД И ЯБЛОКО",
                                     "level6": "ПЭТ",
@@ -1031,7 +1109,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 125,
-                                    "name2": "ДП НапСокосод Агуша Ябл-Вишня 300мл БП 6Х",
+                                    type: "product", "name": "ДП НапСокосод Агуша Ябл-Вишня 300мл БП 6Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО И ВИШНЯ",
                                     "level6": "ПЭТ",
@@ -1044,16 +1122,17 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 126,
                     "name": "Жидкие Молочные Десерты Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 127,
                             "name": "Каши Жидкие",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 128,
-                                    "name2": "Каша мол рисов АгушаЗасып 2.7% 200мл TBAB 18Х",
+                                    type: "product",
+                                    "name": "Каша мол рисов АгушаЗасып 2.7% 200мл TBAB 18Х",
                                     "level4": "АГУША",
                                     "level5": "РИС",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1061,7 +1140,8 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 129,
-                                    "name2": "Каша мол-греч Агуша Засыпайка 2.5% 200мл х18 TBAB",
+                                    type: "product",
+                                    "name": "Каша мол-греч Агуша Засыпайка 2.5% 200мл х18 TBAB",
                                     "level4": "АГУША",
                                     "level5": "ГРЕЧКА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1069,7 +1149,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 130,
-                                    "name2": "Каша мол-рис АгушаЗасып-ка ЯблГру2.7%200мл х18 TBA",
+                                    type: "product", "name": "Каша мол-рис АгушаЗасып-ка ЯблГру2.7%200мл х18 TBA",
                                     "level4": "АГУША",
                                     "level5": "РИС, ЯБЛОКО, ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1077,7 +1157,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 131,
-                                    "name2": "КашаМол АгушЗасып ПшенТыкв 2.7%200мл TBA СГ150 18Х",
+                                    type: "product", "name": "КашаМол АгушЗасып ПшенТыкв 2.7%200мл TBA СГ150 18Х",
                                     "level4": "АГУША",
                                     "level5": "ПШЕНИЦА, ТЫКВА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1085,7 +1165,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 132,
-                                    "name2": "КашаМол ОвсянМалин АгушаЗасып 2.5% 200мл TBAB 18Х",
+                                    type: "product", "name": "КашаМол ОвсянМалин АгушаЗасып 2.5% 200мл TBAB 18Х",
                                     "level4": "АГУША",
                                     "level5": "ОВСЯНКА И МАЛИНА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1093,7 +1173,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 133,
-                                    "name2": "КашаМол пшенич с тыкв АгушаЗасып 2.7%200мл TBA 18Х",
+                                    type: "product", "name": "КашаМол пшенич с тыкв АгушаЗасып 2.7%200мл TBA 18Х",
                                     "level4": "АГУША",
                                     "level5": "ПШЕНИЦА, ТЫКВА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1101,7 +1181,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 134,
-                                    "name2": "КашаМолАгушЗасып РисЯблГру 2.7%200мл TBA СГ150 18Х",
+                                    type: "product", "name": "КашаМолАгушЗасып РисЯблГру 2.7%200мл TBA СГ150 18Х",
                                     "level4": "АГУША",
                                     "level5": "РИС, ЯБЛОКО, ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1109,7 +1189,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 135,
-                                    "name2": "КашаМолАгушЗасыпОвсянМалин2.5% 200мл TBA СГ150 18Х",
+                                    type: "product", "name": "КашаМолАгушЗасыпОвсянМалин2.5% 200мл TBA СГ150 18Х",
                                     "level4": "АГУША",
                                     "level5": "ОВСЯНКА И МАЛИНА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1117,7 +1197,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 136,
-                                    "name2": "КашаМолоч Агуша Гречка 2.5% 200мл ТВАВ СГ150 18Х",
+                                    type: "product", "name": "КашаМолоч Агуша Гречка 2.5% 200мл ТВАВ СГ150 18Х",
                                     "level4": "АГУША",
                                     "level5": "ГРЕЧКА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1125,7 +1205,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 137,
-                                    "name2": "КашМол злак АгушаЗасып груш,бан 2.7%200мл TBA 18Х",
+                                    type: "product", "name": "КашМол злак АгушаЗасып груш,бан 2.7%200мл TBA 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЗЛАКИ, ГРУША, БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1133,7 +1213,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 138,
-                                    "name2": "КашМолАгушЗасыпЗлакГрушБан 2.7%200мл TBA СГ150 18Х",
+                                    type: "product", "name": "КашМолАгушЗасыпЗлакГрушБан 2.7%200мл TBA СГ150 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЗЛАКИ, ГРУША, БАНАН",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1144,11 +1224,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 139,
                             "name": "Молочный Коктейль Дп",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 140,
-                                    "name2": "ДП Кокт мол/зл Агуша Я САМ греч-мол 3%1х18х209г",
+                                    type: "product", "name": "ДП Кокт мол/зл Агуша Я САМ греч-мол 3%1х18х209г",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ГРЕЧКА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1156,7 +1236,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 141,
-                                    "name2": "ДП Кокт мол/зл Агуша Я САМ рис-яб-гр 1х18х209г",
+                                    type: "product", "name": "ДП Кокт мол/зл Агуша Я САМ рис-яб-гр 1х18х209г",
                                     "level4": "АГУША Я САМ",
                                     "level5": "РИС, ЯБЛОКО, ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1164,7 +1244,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 142,
-                                    "name2": "Кокт Мол Агуша Гречка Злак 3% 200мл х18 БЗ ДП",
+                                    type: "product", "name": "Кокт Мол Агуша Гречка Злак 3% 200мл х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРЕЧКА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1172,7 +1252,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 143,
-                                    "name2": "Кокт Мол Агуша Рис Ябл Груш 3% 200мл х18 БЗ ДП",
+                                    type: "product", "name": "Кокт Мол Агуша Рис Ябл Груш 3% 200мл х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "РИС, ЯБЛОКО, ГРУША",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1180,7 +1260,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 144,
-                                    "name2": "Кокт Мол АгушаЯСам Ваниль 2.5% 200мл х18 БЗ ДП",
+                                    type: "product", "name": "Кокт Мол АгушаЯСам Ваниль 2.5% 200мл х18 БЗ ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1188,7 +1268,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 145,
-                                    "name2": "Кокт Мол АгушаЯСам Какао 2.5% 200мл х18 БЗ ДП",
+                                    type: "product", "name": "Кокт Мол АгушаЯСам Какао 2.5% 200мл х18 БЗ ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КАКАО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1196,7 +1276,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 146,
-                                    "name2": "Кокт Мол АгушаЯСам Малина 2.5% 200мл х18 БЗ ДП",
+                                    type: "product", "name": "Кокт Мол АгушаЯСам Малина 2.5% 200мл х18 БЗ ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "МАЛИНА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1204,7 +1284,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 147,
-                                    "name2": "Коктейль мол Агуша Я САМ! мал 2.5% 1х27х200мл ТВАВ",
+                                    type: "product", "name": "Коктейль мол Агуша Я САМ! мал 2.5% 1х27х200мл ТВАВ",
                                     "level4": "АГУША Я САМ",
                                     "level5": "МАЛИНА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1212,7 +1292,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 148,
-                                    "name2": "Коктейль мол Агуша ЯСАМ! какао 2.5%1х27х200мл ТВАВ",
+                                    type: "product", "name": "Коктейль мол Агуша ЯСАМ! какао 2.5%1х27х200мл ТВАВ",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КАКАО",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1220,7 +1300,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 149,
-                                    "name2": "МолКокт Агуша Земляника 2.5% 200мл TBAВ 18Х",
+                                    type: "product", "name": "МолКокт Агуша Земляника 2.5% 200мл TBAВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЗЕМЛЯНИКА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1228,7 +1308,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 150,
-                                    "name2": "МолКокт Агуша Малина 2.5% 200мл TBAB 18Х",
+                                    type: "product", "name": "МолКокт Агуша Малина 2.5% 200мл TBAB 18Х",
                                     "level4": "АГУША",
                                     "level5": "МАЛИНА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1236,7 +1316,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 151,
-                                    "name2": "МолКокт Агуша ЯгодыЛесн 2.5% 200мл TBAВ 18Х",
+                                    type: "product", "name": "МолКокт Агуша ЯгодыЛесн 2.5% 200мл TBAВ 18Х",
                                     "level4": "АГУША",
                                     "level5": "ЛЕСНЫЕ ЯГОДЫ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1249,16 +1329,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 152,
                     "name": "Жидкие Молочные Смеси",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 153,
                             "name": "Кисломолочная Детская Смесь",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 154,
-                                    "name2": "Смесь КислМол Агуша1 3.5% 204г х12 БЗ ДП",
+                                    type: "product", "name": "Смесь КислМол Агуша1 3.5% 204г х12 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1266,7 +1346,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 155,
-                                    "name2": "Смесь КислМол Агуша2 3.4% 204г х12 БЗ ДП",
+                                    type: "product", "name": "Смесь КислМол Агуша2 3.4% 204г х12 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1277,11 +1357,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 156,
                             "name": "Смесь Молочная Сухая",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 157,
-                                    "name2": "Смесь сух мол Беллакт Оптима1+ 350г х21 КорФол",
+                                    type: "product", "name": "Смесь сух мол Беллакт Оптима1+ 350г х21 КорФол",
                                     "level4": "БЕЛЛАКТ",
                                     "level5": "",
                                     "level6": "ПАЧКА",
@@ -1289,7 +1369,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 158,
-                                    "name2": "Смесь сух мол Беллакт Оптима2+ 350г х21 КорФол",
+                                    type: "product", "name": "Смесь сух мол Беллакт Оптима2+ 350г х21 КорФол",
                                     "level4": "БЕЛЛАКТ",
                                     "level5": "",
                                     "level6": "ПАЧКА",
@@ -1300,11 +1380,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 159,
                             "name": "Стерилизованная Детская Смесь",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 160,
-                                    "name2": "Смесь стерил с Преб Агуша1 3.4% 0.2л х18 БЗ ДП",
+                                    type: "product", "name": "Смесь стерил с Преб Агуша1 3.4% 0.2л х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1312,7 +1392,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 161,
-                                    "name2": "Смесь стерил с Преб Агуша2 3.1% 0.2л х18 БЗ ДП",
+                                    type: "product", "name": "Смесь стерил с Преб Агуша2 3.1% 0.2л х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1325,16 +1405,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 162,
                     "name": "Йогурты Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 163,
                             "name": "Йогурт Вязкий Живой Дп",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 164,
-                                    "name2": "ДП Йогурт вязкий Агуша Злаки 2.7% 1х24x90г",
+                                    type: "product", "name": "ДП Йогурт вязкий Агуша Злаки 2.7% 1х24x90г",
                                     "level4": "АГУША",
                                     "level5": "ЗЛАКИ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -1342,7 +1422,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 165,
-                                    "name2": "Йогурт Агуша натуральный 3.1% 90г х6 МСТ",
+                                    type: "product", "name": "Йогурт Агуша натуральный 3.1% 90г х6 МСТ",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -1350,7 +1430,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 166,
-                                    "name2": "Йогурт Фр АгушаЯСам кус ЯблГруш 2.5%110гх12 Ван ДП",
+                                    type: "product", "name": "Йогурт Фр АгушаЯСам кус ЯблГруш 2.5%110гх12 Ван ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -1358,7 +1438,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 167,
-                                    "name2": "Йогурт Агуша Банан 2.7% 90г х24 Четв ДП",
+                                    type: "product", "name": "Йогурт Агуша Банан 2.7% 90г х24 Четв ДП",
                                     "level4": "АГУША",
                                     "level5": "БАНАН",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -1366,7 +1446,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 168,
-                                    "name2": "Йогурт Агуша банан 2.7% 90г х6 МСТ",
+                                    type: "product", "name": "Йогурт Агуша банан 2.7% 90г х6 МСТ",
                                     "level4": "АГУША",
                                     "level5": "БАНАН",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -1374,7 +1454,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 169,
-                                    "name2": "Йогурт Агуша Землян-Малин 2.7% 90г х6 МСТ",
+                                    type: "product", "name": "Йогурт Агуша Землян-Малин 2.7% 90г х6 МСТ",
                                     "level4": "АГУША",
                                     "level5": "ЗЕМЛЯНИКА-МАЛИНА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -1382,7 +1462,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 170,
-                                    "name2": "Йогурт Агуша Малина Земл 2.7% 90г х24 Четв ДП",
+                                    type: "product", "name": "Йогурт Агуша Малина Земл 2.7% 90г х24 Четв ДП",
                                     "level4": "АГУША",
                                     "level5": "ЗЕМЛЯНИКА-МАЛИНА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -1390,7 +1470,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 171,
-                                    "name2": "Йогурт АгушаЗасып ЯгЛесн-Мелисса 2.7% 90г мст 6Х",
+                                    type: "product", "name": "Йогурт АгушаЗасып ЯгЛесн-Мелисса 2.7% 90г мст 6Х",
                                     "level4": "АГУША",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ-МЕЛИССА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -1403,16 +1483,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 172,
                     "name": "Йогурты Питьевые Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 173,
                             "name": "Йогурт Питьевой Дп",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 174,
-                                    "name2": "ДП Йогурт фр АгушаЯСАМ! виш 2.7% 1х12х85г DoyPack",
+                                    type: "product", "name": "ДП Йогурт фр АгушаЯСАМ! виш 2.7% 1х12х85г DoyPack",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ВИШНЯ",
                                     "level6": "ДОЙ-ПАК",
@@ -1420,7 +1500,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 175,
-                                    "name2": "Йогурт Агуша Чернослив 2.7% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Агуша Чернослив 2.7% 200г х12 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНОСЛИВ",
                                     "level6": "ПЭТ",
@@ -1428,7 +1508,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 176,
-                                    "name2": "Йогурт пит Агуша Я САМ! Банан-Печенье 2.7%200г Бут",
+                                    type: "product", "name": "Йогурт пит Агуша Я САМ! Банан-Печенье 2.7%200г Бут",
                                     "level4": "АГУША Я САМ",
                                     "level5": "БАНАН, ПЕЧЕНЬЕ",
                                     "level6": "ПЭТ",
@@ -1436,7 +1516,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 177,
-                                    "name2": "Йогурт Фрукт АгушаЯСам Малина 2.7% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт АгушаЯСам Малина 2.7% 200г х12 БП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "МАЛИНА",
                                     "level6": "ПЭТ",
@@ -1444,7 +1524,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 178,
-                                    "name2": "Йогурт Фрукт АгушаЯСам Ябл Бан 2.2% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт АгушаЯСам Ябл Бан 2.2% 200г х12 БП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ПЭТ",
@@ -1452,7 +1532,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 179,
-                                    "name2": "ДП Йог пит Агуша ябл-груш 2.7% 200г х4 БП",
+                                    type: "product", "name": "ДП Йог пит Агуша ябл-груш 2.7% 200г х4 БП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "ПЭТ",
@@ -1460,7 +1540,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 180,
-                                    "name2": "ДП Йогурт Агуша клуб-бан 2.7% 200г х4 БутПл",
+                                    type: "product", "name": "ДП Йогурт Агуша клуб-бан 2.7% 200г х4 БутПл",
                                     "level4": "АГУША",
                                     "level5": "КЛУБНИКА-БАНАН",
                                     "level6": "ПЭТ",
@@ -1468,7 +1548,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 181,
-                                    "name2": "Йогурт Агуша Засып-ка ЗелЯбл+Мелис 2.7% 200г БП 4Х",
+                                    type: "product", "name": "Йогурт Агуша Засып-ка ЗелЯбл+Мелис 2.7% 200г БП 4Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО ЗЕЛЕНОЕ-МЕЛИССА",
                                     "level6": "ПЭТ",
@@ -1476,7 +1556,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 182,
-                                    "name2": "Йогурт Агуша Засып-ка ЗелЯбл+Мелис 2.7%200г БП 12Х",
+                                    type: "product", "name": "Йогурт Агуша Засып-ка ЗелЯбл+Мелис 2.7%200г БП 12Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО ЗЕЛЕНОЕ-МЕЛИССА",
                                     "level6": "ПЭТ",
@@ -1484,7 +1564,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 183,
-                                    "name2": "Йогурт Агуша Засып-ка ЗелЯбл+Мелис 2.7%200г БП 4Х",
+                                    type: "product", "name": "Йогурт Агуша Засып-ка ЗелЯбл+Мелис 2.7%200г БП 4Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО ЗЕЛЕНОЕ-МЕЛИССА",
                                     "level6": "ПЭТ",
@@ -1492,7 +1572,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 184,
-                                    "name2": "Йогурт Агуша Засып-ка ЗелЯбл+Мелис 2.7%200г х12 БП",
+                                    type: "product", "name": "Йогурт Агуша Засып-ка ЗелЯбл+Мелис 2.7%200г х12 БП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО ЗЕЛЕНОЕ-МЕЛИССА",
                                     "level6": "ПЭТ",
@@ -1500,7 +1580,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 185,
-                                    "name2": "Йогурт Агуша Злаки 2.7% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Агуша Злаки 2.7% 200г х12 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -1508,7 +1588,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 186,
-                                    "name2": "Йогурт Агуша Классич 3.1% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Агуша Классич 3.1% 200г х12 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1516,7 +1596,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 187,
-                                    "name2": "Йогурт Агуша Клуб Банан 2.7% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Агуша Клуб Банан 2.7% 200г х12 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "КЛУБНИКА-БАНАН",
                                     "level6": "ПЭТ",
@@ -1524,7 +1604,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 188,
-                                    "name2": "Йогурт Агуша Персик 2.7% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Агуша Персик 2.7% 200г х12 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "ПЕРСИК",
                                     "level6": "ПЭТ",
@@ -1532,7 +1612,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 189,
-                                    "name2": "Йогурт Агуша Яблоко Груша 2.7% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Агуша Яблоко Груша 2.7% 200г х12 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "ПЭТ",
@@ -1540,7 +1620,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 190,
-                                    "name2": "Йогурт фр Агуша СевернЯгоды 2.7% 200г БП 12Х",
+                                    type: "product", "name": "Йогурт фр Агуша СевернЯгоды 2.7% 200г БП 12Х",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНИКА, БРУСНИКА, КЛЮКВА",
                                     "level6": "ПЭТ",
@@ -1548,7 +1628,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 191,
-                                    "name2": "Йогурт фр Агуша СевернЯгоды 2.7% 200г БП 4Х",
+                                    type: "product", "name": "Йогурт фр Агуша СевернЯгоды 2.7% 200г БП 4Х",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНИКА, БРУСНИКА, КЛЮКВА",
                                     "level6": "ПЭТ",
@@ -1556,7 +1636,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 192,
-                                    "name2": "Йогурт Фрукт АгушаЯСам Клуб Земл 2.2%200гх12 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт АгушаЯСам Клуб Земл 2.2%200гх12 БП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -1564,7 +1644,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 193,
-                                    "name2": "Йогурт Фрукт АгушаЯСам Клуб Земл 2.2%200гх24 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт АгушаЯСам Клуб Земл 2.2%200гх24 БП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -1572,7 +1652,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 194,
-                                    "name2": "Йогурт Фрукт АгушаЯСам Ябл Бан 2.2% 200г х24 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт АгушаЯСам Ябл Бан 2.2% 200г х24 БП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ПЭТ",
@@ -1580,7 +1660,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 195,
-                                    "name2": "Йогурт Фрукт АгушаЯСам ЯблГруш 2.7% 85гх12 ДойП ДП",
+                                    type: "product", "name": "Йогурт Фрукт АгушаЯСам ЯблГруш 2.7% 85гх12 ДойП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО-ГРУША",
                                     "level6": "ДОЙ-ПАК",
@@ -1588,7 +1668,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 196,
-                                    "name2": "Йогурт Фрукт АгушаЯСам Яг Асcорт 2.6%85гх12ДойП ДП",
+                                    type: "product", "name": "Йогурт Фрукт АгушаЯСам Яг Асcорт 2.6%85гх12ДойП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯГОДЫ",
                                     "level6": "ДОЙ-ПАК",
@@ -1601,16 +1681,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 197,
                     "name": "Кефир Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 198,
                             "name": "Кефир Дп",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 199,
-                                    "name2": "Биокефир Агуша 3.2% 204г х12 БЗ ДП",
+                                    type: "product", "name": "Биокефир Агуша 3.2% 204г х12 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1618,7 +1698,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 200,
-                                    "name2": "Биолакт Агуша 3.2% 200г х4 БутПл",
+                                    type: "product", "name": "Биолакт Агуша 3.2% 200г х4 БутПл",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1626,7 +1706,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 201,
-                                    "name2": "Кефир детский Агуша 2.5% 205г х5 TRTwCap",
+                                    type: "product", "name": "Кефир детский Агуша 2.5% 205г х5 TRTwCap",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -1634,7 +1714,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 202,
-                                    "name2": "Нап кисмол Агуша Биолакт 3.2% 200г х12 БП ДП",
+                                    type: "product", "name": "Нап кисмол Агуша Биолакт 3.2% 200г х12 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1642,7 +1722,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 203,
-                                    "name2": "ДП Биолакт Агуша 3.2% 200г БП СГ21 12Х",
+                                    type: "product", "name": "ДП Биолакт Агуша 3.2% 200г БП СГ21 12Х",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1650,7 +1730,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 204,
-                                    "name2": "ДП Биолакт Агуша 3.2% 200г БП СГ21 4Х",
+                                    type: "product", "name": "ДП Биолакт Агуша 3.2% 200г БП СГ21 4Х",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1658,7 +1738,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 205,
-                                    "name2": "ДП Биолакт Агуша 3.2% 200г х4 ПлБут",
+                                    type: "product", "name": "ДП Биолакт Агуша 3.2% 200г х4 ПлБут",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1666,7 +1746,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 206,
-                                    "name2": "Кефир Агуша 2.5% 205г РР 10Х",
+                                    type: "product", "name": "Кефир Агуша 2.5% 205г РР 10Х",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -1674,7 +1754,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 207,
-                                    "name2": "Кефир Агуша 2.5% 205г х10 ТРТвК ДП",
+                                    type: "product", "name": "Кефир Агуша 2.5% 205г х10 ТРТвК ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -1682,7 +1762,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 208,
-                                    "name2": "Кефир Агуша 3.2% 204г х12 БЗ ДП",
+                                    type: "product", "name": "Кефир Агуша 3.2% 204г х12 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1695,16 +1775,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 209,
                     "name": "Кисломолочные Продукты Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 210,
                             "name": "Ряженка Дп",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 211,
-                                    "name2": "Ряженка Агуша 3.2% 200г БП 12Х",
+                                    type: "product", "name": "Ряженка Агуша 3.2% 200г БП 12Х",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1712,7 +1792,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 212,
-                                    "name2": "Ряженка Агуша Клубника 2.9% 200г БП 12Х",
+                                    type: "product", "name": "Ряженка Агуша Клубника 2.9% 200г БП 12Х",
                                     "level4": "АГУША",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -1720,7 +1800,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 213,
-                                    "name2": "Ряженка Агуша 3.2% 200г БП СГ20 12Х",
+                                    type: "product", "name": "Ряженка Агуша 3.2% 200г БП СГ20 12Х",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1728,7 +1808,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 214,
-                                    "name2": "Ряженка Агуша 3.2% 200г БП СГ20 4Х",
+                                    type: "product", "name": "Ряженка Агуша 3.2% 200г БП СГ20 4Х",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -1736,7 +1816,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 215,
-                                    "name2": "Ряженка Агуша Клубника 2.9% 200г БП СГ20 12Х",
+                                    type: "product", "name": "Ряженка Агуша Клубника 2.9% 200г БП СГ20 12Х",
                                     "level4": "АГУША",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -1744,7 +1824,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 216,
-                                    "name2": "Ряженка Агуша Клубника 2.9% 200г БП СГ20 4Х",
+                                    type: "product", "name": "Ряженка Агуша Клубника 2.9% 200г БП СГ20 4Х",
                                     "level4": "АГУША",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -1752,7 +1832,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 217,
-                                    "name2": "Ряженка Агуша Черника 2.9% 200г БП 12Х",
+                                    type: "product", "name": "Ряженка Агуша Черника 2.9% 200г БП 12Х",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ПЭТ",
@@ -1760,7 +1840,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 218,
-                                    "name2": "Ряженка Агуша Черника 2.9% 200г БП 4Х",
+                                    type: "product", "name": "Ряженка Агуша Черника 2.9% 200г БП 4Х",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ПЭТ",
@@ -1773,16 +1853,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 219,
                     "name": "Молоко Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 220,
                             "name": "Молоко Стерилизованное Дп",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 221,
-                                    "name2": "Молоко стерил Агуша Витам 2.5% 0.2л х18 БЗ ДП",
+                                    type: "product", "name": "Молоко стерил Агуша Витам 2.5% 0.2л х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1790,7 +1870,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 222,
-                                    "name2": "Молоко стерил Агуша Витам 2.5% 0.2л х18 БЗ ДП",
+                                    type: "product", "name": "Молоко стерил Агуша Витам 2.5% 0.2л х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1798,7 +1878,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 223,
-                                    "name2": "Молоко стерил Агуша Витам 2.5% 0.2л х18 БЗ ДП",
+                                    type: "product", "name": "Молоко стерил Агуша Витам 2.5% 0.2л х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1806,7 +1886,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 224,
-                                    "name2": "Молоко стерил Агуша Витам 3.2% 500г х15 СЛРК ДП",
+                                    type: "product", "name": "Молоко стерил Агуша Витам 3.2% 500г х15 СЛРК ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "КОМБИ ФИТ",
@@ -1814,7 +1894,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 225,
-                                    "name2": "Молоко стерил Агуша Витам 3.2% 500мл х15 СЛРК ДП",
+                                    type: "product", "name": "Молоко стерил Агуша Витам 3.2% 500мл х15 СЛРК ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -1822,7 +1902,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 226,
-                                    "name2": "Молоко стерил АгушаЯСам Иммун 2.5%500гх15СЛ ДП",
+                                    type: "product", "name": "Молоко стерил АгушаЯСам Иммун 2.5%500гх15СЛ ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -1830,7 +1910,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 227,
-                                    "name2": "МолУльтрДет с 3х лет Агуша3.2%925мл х12 TBASHC АКЦ",
+                                    type: "product", "name": "МолУльтрДет с 3х лет Агуша3.2%925мл х12 TBASHC АКЦ",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -1838,7 +1918,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 228,
-                                    "name2": "Мол ультр с 3лет Агуша с вит и йод 2.5% 1л х12 Сл",
+                                    type: "product", "name": "Мол ультр с 3лет Агуша с вит и йод 2.5% 1л х12 Сл",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -1846,7 +1926,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 229,
-                                    "name2": "Молоко стерил Агуша 4витам Йод 3.2% 0.2л х18 БЗ ДП",
+                                    type: "product", "name": "Молоко стерил Агуша 4витам Йод 3.2% 0.2л х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1854,7 +1934,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 230,
-                                    "name2": "Молоко стерил Агуша Витам 3.2% 500г х15 СЛРК ДП",
+                                    type: "product", "name": "Молоко стерил Агуша Витам 3.2% 500г х15 СЛРК ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -1862,7 +1942,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 231,
-                                    "name2": "Молоко стерил Агуша для БерКорм 2.5% 1л х12 СЛ",
+                                    type: "product", "name": "Молоко стерил Агуша для БерКорм 2.5% 1л х12 СЛ",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -1870,7 +1950,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 232,
-                                    "name2": "Молоко стерил Агуша Пребиот 2.5% 0.2л х18 БЗ ДП",
+                                    type: "product", "name": "Молоко стерил Агуша Пребиот 2.5% 0.2л х18 БЗ ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1878,7 +1958,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 233,
-                                    "name2": "Молоко ультр д/д с 3лет Агуша 3.2%925мл х12 TBASHC",
+                                    type: "product", "name": "Молоко ультр д/д с 3лет Агуша 3.2%925мл х12 TBASHC",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -1886,7 +1966,8 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 234,
-                                    "name2": "МолСтерДетАгуша витА,В1,В2,С+йод 2.5%200мл х18TBABод2.5%200мл х18 TBA",
+                                    type: "product",
+                                    "name": "МолСтерДетАгуша витА,В1,В2,С+йод 2.5%200мл х18TBABод2.5%200мл х18 TBA",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -1899,16 +1980,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 235,
                     "name": "Мясные Пюре",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 236,
                             "name": "Мясные Пюре",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 237,
-                                    "name2": "ДП Пюре мяс Агуша Инд 5.5% 1x8x80г Стекло",
+                                    type: "product", "name": "ДП Пюре мяс Агуша Инд 5.5% 1x8x80г Стекло",
                                     "level4": "АГУША",
                                     "level5": "ИНДЕЙКА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -1916,7 +1997,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 238,
-                                    "name2": "Пюре Мясное Агуша Говяд 6.2% 80г х2 х4 МП СБнДП",
+                                    type: "product", "name": "Пюре Мясное Агуша Говяд 6.2% 80г х2 х4 МП СБнДП",
                                     "level4": "АГУША",
                                     "level5": "ГОВЯДИНА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -1924,7 +2005,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 239,
-                                    "name2": "Пюре Мясное Агуша Индейка 5.5% 80г х2 х4 МП СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша Индейка 5.5% 80г х2 х4 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ИНДЕЙКА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -1932,7 +2013,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 240,
-                                    "name2": "Пюре Мясное Агуша ЦыпГовяд 7.7% 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша ЦыпГовяд 7.7% 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЦЫПЛЕНОК-ГОВЯДИНА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -1940,7 +2021,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 241,
-                                    "name2": "Пюре Мясное Агуша ЦыпГовяд 7.7% 80гх2х4 МП СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша ЦыпГовяд 7.7% 80гх2х4 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЦЫПЛЕНОК-ГОВЯДИНА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -1948,7 +2029,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 242,
-                                    "name2": "Пюре Мясное Агуша Цыпленок 6% 80г х2 х4 МП СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша Цыпленок 6% 80г х2 х4 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЦЫПЛЕНОК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -1956,7 +2037,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 243,
-                                    "name2": "Пюре Мясное Агуша Цыпленок 6% 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша Цыпленок 6% 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЦЫПЛЕНОК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -1964,7 +2045,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 244,
-                                    "name2": "ДП Пюре мясное Агуша говяд 6.2% 1х8х100г Жесть",
+                                    type: "product", "name": "ДП Пюре мясное Агуша говяд 6.2% 1х8х100г Жесть",
                                     "level4": "АГУША",
                                     "level5": "ГОВЯДИНА",
                                     "level6": "БАНКА",
@@ -1972,7 +2053,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 245,
-                                    "name2": "ДП Пюре мясное Агуша кролик 7% 1х8х100г Жесть",
+                                    type: "product", "name": "ДП Пюре мясное Агуша кролик 7% 1х8х100г Жесть",
                                     "level4": "АГУША",
                                     "level5": "КРОЛИК",
                                     "level6": "БАНКА",
@@ -1980,7 +2061,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 246,
-                                    "name2": "ДП Пюре мясное Агуша цып 6% 1х8х100г Жесть",
+                                    type: "product", "name": "ДП Пюре мясное Агуша цып 6% 1х8х100г Жесть",
                                     "level4": "АГУША",
                                     "level5": "ЦЫПЛЕНОК",
                                     "level6": "БАНКА",
@@ -1988,7 +2069,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 247,
-                                    "name2": "Пюре Мясное Агуша Говяд 6.2% 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша Говяд 6.2% 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ГОВЯДИНА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -1996,7 +2077,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 248,
-                                    "name2": "Пюре Мясное Агуша Индейка 5.5% 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша Индейка 5.5% 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ИНДЕЙКА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2004,7 +2085,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 249,
-                                    "name2": "Пюре Мясное Агуша Кролик 7% 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша Кролик 7% 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "КРОЛИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2012,7 +2093,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 250,
-                                    "name2": "Пюре Мясное Агуша ЦыпГовяд 7.7% 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша ЦыпГовяд 7.7% 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЦЫПЛЕНОК-ГОВЯДИНА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2020,7 +2101,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 251,
-                                    "name2": "Пюре Мясное Агуша Цыпленок 6% 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Мясное Агуша Цыпленок 6% 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЦЫПЛЕНОК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2031,11 +2112,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 252,
                             "name": "Мясорастительное Пюре",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 253,
-                                    "name2": "ПюрМясРаст Агуша ГовядинаОвощи 2.7% 105г СБн 12Х",
+                                    type: "product", "name": "ПюрМясРаст Агуша ГовядинаОвощи 2.7% 105г СБн 12Х",
                                     "level4": "АГУША",
                                     "level5": "ГОВЯДИНА ОВОЩИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2043,7 +2124,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 254,
-                                    "name2": "ПюрМясРаст Агуша ИдейкаОвощ 2.2% 105г СБн 12Х",
+                                    type: "product", "name": "ПюрМясРаст Агуша ИдейкаОвощ 2.2% 105г СБн 12Х",
                                     "level4": "АГУША",
                                     "level5": "ИНДЕЙКА ОВОЩИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2051,7 +2132,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 255,
-                                    "name2": "ПюрМясРаст Агуша ЦыпленОвощ 2.6% 105г СБн 12Х",
+                                    type: "product", "name": "ПюрМясРаст Агуша ЦыпленОвощ 2.6% 105г СБн 12Х",
                                     "level4": "АГУША",
                                     "level5": "ЦЫПЛЕНОК ОВОЩИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2064,16 +2145,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 256,
                     "name": "Овощные Пюре",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 257,
                             "name": "Овощные Пюре",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 258,
-                                    "name2": "ВБД Пюре овощ Агуша Кабачок 80г СБн 8X",
+                                    type: "product", "name": "ВБД Пюре овощ Агуша Кабачок 80г СБн 8X",
                                     "level4": "АГУША",
                                     "level5": "КАБАЧОК",
                                     "level6": "Банка стекло",
@@ -2081,7 +2162,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 259,
-                                    "name2": "Пюре Овощ Агуша Картоф Кабачок 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Овощ Агуша Картоф Кабачок 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "КАРТОФЕЛЬ-КАБАЧОК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2089,7 +2170,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 260,
-                                    "name2": "Пюре Овощ Агуша Цветн капуста 80г СБн 8Х",
+                                    type: "product", "name": "Пюре Овощ Агуша Цветн капуста 80г СБн 8Х",
                                     "level4": "АГУША",
                                     "level5": "КАПУСТА ЦВЕТНАЯ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2097,7 +2178,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 261,
-                                    "name2": "Пюре Овощн Агуша Брокколи 80г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Овощн Агуша Брокколи 80г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "БРОККОЛИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2105,7 +2186,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 262,
-                                    "name2": "Пюре Овощн Агуша Морковь 105г СБн 12Х",
+                                    type: "product", "name": "Пюре Овощн Агуша Морковь 105г СБн 12Х",
                                     "level4": "АГУША",
                                     "level5": "МОРКОВЬ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2113,7 +2194,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 263,
-                                    "name2": "Пюре овощное Агуша Тыква 105г СБн 12Х",
+                                    type: "product", "name": "Пюре овощное Агуша Тыква 105г СБн 12Х",
                                     "level4": "АГУША",
                                     "level5": "ТЫКВА",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2126,16 +2207,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 264,
                     "name": "Питьевая Вода Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 265,
                             "name": "Питьевая Вода",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 266,
-                                    "name2": "Вода Питьевая Детская Агуша 0.33л х12 БП",
+                                    type: "product", "name": "Вода Питьевая Детская Агуша 0.33л х12 БП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -2143,7 +2224,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 267,
-                                    "name2": "Вода Питьевая Детская Агуша 1.5л х6 БП",
+                                    type: "product", "name": "Вода Питьевая Детская Агуша 1.5л х6 БП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -2151,7 +2232,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 268,
-                                    "name2": "Вода Питьевая Детская Агуша 5л х4 БП ДП",
+                                    type: "product", "name": "Вода Питьевая Детская Агуша 5л х4 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -2159,7 +2240,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 269,
-                                    "name2": "Вода питьевая \"Агуша\" 0% 5л БП",
+                                    type: "product", "name": "Вода питьевая \"Агуша\" 0% 5л БП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -2167,7 +2248,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 270,
-                                    "name2": "Вода Питьевая Детская Агуша 0.33л х12 БП",
+                                    type: "product", "name": "Вода Питьевая Детская Агуша 0.33л х12 БП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -2175,7 +2256,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 271,
-                                    "name2": "Вода Питьевая Детская Агуша 1.5л х6 БП",
+                                    type: "product", "name": "Вода Питьевая Детская Агуша 1.5л х6 БП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -2183,7 +2264,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 272,
-                                    "name2": "Вода Питьевая Детская Агуша 1.5л х6 БП",
+                                    type: "product", "name": "Вода Питьевая Детская Агуша 1.5л х6 БП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -2191,7 +2272,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 273,
-                                    "name2": "Вода Питьевая Детская Агуша 5л х4 БП ДП",
+                                    type: "product", "name": "Вода Питьевая Детская Агуша 5л х4 БП ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -2204,16 +2285,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 274,
                     "name": "Сухие Каши",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 275,
                             "name": "Сухие Каши",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 276,
-                                    "name2": "Каша Молоч Сух Агуша Овсян 200г х10 КФол ДП",
+                                    type: "product", "name": "Каша Молоч Сух Агуша Овсян 200г х10 КФол ДП",
                                     "level4": "АГУША",
                                     "level5": "ОВСЯНКА",
                                     "level6": "КАРТОН",
@@ -2221,7 +2302,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 277,
-                                    "name2": "Каша Молоч Сух Агуша Рис 200г х10 КФол ДП",
+                                    type: "product", "name": "Каша Молоч Сух Агуша Рис 200г х10 КФол ДП",
                                     "level4": "АГУША",
                                     "level5": "РИС",
                                     "level6": "КАРТОН",
@@ -2229,7 +2310,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 278,
-                                    "name2": "Каша Молоч Сух Агуша Рис КукурБан 200г х10 КФолДП",
+                                    type: "product", "name": "Каша Молоч Сух Агуша Рис КукурБан 200г х10 КФолДП",
                                     "level4": "АГУША",
                                     "level5": "РИС, КУКУРУЗА, БАНАН",
                                     "level6": "КАРТОН",
@@ -2237,7 +2318,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 279,
-                                    "name2": "Каша сух безмол Агуша ГречЯблоко 200г КартФол 10Х",
+                                    type: "product", "name": "Каша сух безмол Агуша ГречЯблоко 200г КартФол 10Х",
                                     "level4": "АГУША",
                                     "level5": "ГРЕЧКА И ЯБЛОКО",
                                     "level6": "КАРТОН",
@@ -2245,7 +2326,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 280,
-                                    "name2": "Каша сух мол Агуша Пшеница с тыкв 200г КартФол 10Х",
+                                    type: "product", "name": "Каша сух мол Агуша Пшеница с тыкв 200г КартФол 10Х",
                                     "level4": "АГУША",
                                     "level5": "ПШЕНИЦА, ТЫКВА",
                                     "level6": "КАРТОН",
@@ -2253,7 +2334,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 281,
-                                    "name2": "Каша сухая безмолоч Агуша Гречн 200г КартФол 10Х",
+                                    type: "product", "name": "Каша сухая безмолоч Агуша Гречн 200г КартФол 10Х",
                                     "level4": "АГУША",
                                     "level5": "ГРЕЧКА",
                                     "level6": "КАРТОН",
@@ -2261,7 +2342,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 282,
-                                    "name2": "Каша сухая молочн Агуша 5 злаков 200г КартФол 10Х",
+                                    type: "product", "name": "Каша сухая молочн Агуша 5 злаков 200г КартФол 10Х",
                                     "level4": "АГУША",
                                     "level5": "ПШ,РИС,ГРЧК,ОВС,ККРЗ",
                                     "level6": "КАРТОН",
@@ -2269,7 +2350,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 283,
-                                    "name2": "КашаСухаяМол Агуша Овсян 12%200г КартФол (стик)10Х",
+                                    type: "product", "name": "КашаСухаяМол Агуша Овсян 12%200г КартФол (стик)10Х",
                                     "level4": "АГУША",
                                     "level5": "ОВСЯНКА",
                                     "level6": "КАРТОН",
@@ -2282,16 +2363,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 284,
                     "name": "Творог Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 285,
                             "name": "Творог Мягкий Дп",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 286,
-                                    "name2": "ДП Биотворог с пребиот дет 4.2% 1х12х100г ван",
+                                    type: "product", "name": "ДП Биотворог с пребиот дет 4.2% 1х12х100г ван",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2299,7 +2380,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 287,
-                                    "name2": "Творог Классический Агуша 4.5% 100г х12 Ван ДП",
+                                    type: "product", "name": "Творог Классический Агуша 4.5% 100г х12 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2307,7 +2388,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 288,
-                                    "name2": "Творог Классический Агуша 4.5% 100г х6 Ван ДП",
+                                    type: "product", "name": "Творог Классический Агуша 4.5% 100г х6 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2315,7 +2396,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 289,
-                                    "name2": "ДП Твор дет Агуша Кальц,витД, преби4.2%50г х12 ван",
+                                    type: "product", "name": "ДП Твор дет Агуша Кальц,витД, преби4.2%50г х12 ван",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2323,7 +2404,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 290,
-                                    "name2": "Творог дет Агуша классич 4.5% 100г ванн НД 6Х",
+                                    type: "product", "name": "Творог дет Агуша классич 4.5% 100г ванн НД 6Х",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2331,7 +2412,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 291,
-                                    "name2": "Творог детск классич Агуша 4.5% 100г ванн 6Х",
+                                    type: "product", "name": "Творог детск классич Агуша 4.5% 100г ванн 6Х",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2339,7 +2420,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 292,
-                                    "name2": "Творог Классический Агуша 4.5% 50г х12 Ван ДП",
+                                    type: "product", "name": "Творог Классический Агуша 4.5% 50г х12 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2352,16 +2433,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 293,
                     "name": "Творожные Десерты Дп",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 294,
                             "name": "Творог Фруктовый Дп",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 295,
-                                    "name2": "ДП Творог фрукт Агуша лесные яг 3.9% 1х12х100г Ван",
+                                    type: "product", "name": "ДП Творог фрукт Агуша лесные яг 3.9% 1х12х100г Ван",
                                     "level4": "АГУША",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2369,7 +2450,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 296,
-                                    "name2": "Твор фр АгушЗасып-ка КлубБан+Мелис 3.8%100г х6 ван",
+                                    type: "product", "name": "Твор фр АгушЗасып-ка КлубБан+Мелис 3.8%100г х6 ван",
                                     "level4": "АГУША",
                                     "level5": "КЛУБНИКА, БАНАН, МЕЛИССА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2377,7 +2458,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 297,
-                                    "name2": "Творог Фр АгушаЯСам Груш Перс 3.6% 100г х12 Ван ДП",
+                                    type: "product", "name": "Творог Фр АгушаЯСам Груш Перс 3.6% 100г х12 Ван ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ГРУША-ПЕРСИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2385,7 +2466,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 298,
-                                    "name2": "Творог Фр АгушаЯСам кус Груш Перс 3.6%100гх12ВанДП",
+                                    type: "product", "name": "Творог Фр АгушаЯСам кус Груш Перс 3.6%100гх12ВанДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ГРУША-ПЕРСИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2393,7 +2474,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 299,
-                                    "name2": "Творог Фр АгушаЯСам кус Клуб Земл 3.6%100гх12ВанДП",
+                                    type: "product", "name": "Творог Фр АгушаЯСам кус Клуб Земл 3.6%100гх12ВанДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2401,7 +2482,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 300,
-                                    "name2": "Творог фр АгушаЯСам с клуб-земл 3.6% 100г х12 ванн",
+                                    type: "product", "name": "Творог фр АгушаЯСам с клуб-земл 3.6% 100г х12 ванн",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2409,7 +2490,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 301,
-                                    "name2": "Творог Фр Двусл АгушаЯСам КлубВан 3.8%100гх12ВанДП",
+                                    type: "product", "name": "Творог Фр Двусл АгушаЯСам КлубВан 3.8%100гх12ВанДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КЛУБНИКА-ВАНИЛЬ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2417,7 +2498,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 302,
-                                    "name2": "Творог Фр Двусл АгушаЯСам КлубВан 3.8%100гх6ВанДП",
+                                    type: "product", "name": "Творог Фр Двусл АгушаЯСам КлубВан 3.8%100гх6ВанДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КЛУБНИКА-ВАНИЛЬ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2425,7 +2506,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 303,
-                                    "name2": "Творог Фр ДвуслАгушаЯСам МалБанПеч3.8%100гх12ВанДП",
+                                    type: "product", "name": "Творог Фр ДвуслАгушаЯСам МалБанПеч3.8%100гх12ВанДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "МАЛИНА, БАНАН, ПЕЧЕНЬЕ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2433,7 +2514,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 304,
-                                    "name2": "Творог Фр ДвуслАгушаЯСам МалБанПеч3.8%100гх6ВанДП",
+                                    type: "product", "name": "Творог Фр ДвуслАгушаЯСам МалБанПеч3.8%100гх6ВанДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "МАЛИНА, БАНАН, ПЕЧЕНЬЕ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2441,7 +2522,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 305,
-                                    "name2": "Творог Фрукт Агуша Абр Мор 3.9% 100г х12 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Абр Мор 3.9% 100г х12 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "АБРИКОС-МОРКОВЬ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2449,7 +2530,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 306,
-                                    "name2": "Творог Фрукт Агуша Абр Мор 3.9% 100г х6 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Абр Мор 3.9% 100г х6 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "АБРИКОС-МОРКОВЬ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2457,7 +2538,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 307,
-                                    "name2": "Творог Фрукт Агуша Груша 3.9% 100г х12 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Груша 3.9% 100г х12 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2465,7 +2546,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 308,
-                                    "name2": "Творог Фрукт Агуша Груша 3.9% 100г х6 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Груша 3.9% 100г х6 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2473,7 +2554,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 309,
-                                    "name2": "Творог Фрукт Агуша Злаки 3.9% 100г х6 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Злаки 3.9% 100г х6 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "ЗЛАКИ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2481,7 +2562,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 310,
-                                    "name2": "Творог Фрукт Агуша МультФр 3.9% 100г х12 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша МультФр 3.9% 100г х12 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2489,7 +2570,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 311,
-                                    "name2": "Творог Фрукт Агуша МультФр 3.9% 100г х6 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша МультФр 3.9% 100г х6 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2497,7 +2578,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 312,
-                                    "name2": "Творог Фрукт Агуша Персик 3.9% 100г х6 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Персик 3.9% 100г х6 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "ПЕРСИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2505,7 +2586,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 313,
-                                    "name2": "Творог Фрукт Агуша Черника 3.9% 100г х12 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Черника 3.9% 100г х12 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2513,7 +2594,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 314,
-                                    "name2": "Творог Фрукт Агуша Черника 3.9% 100г х6 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Черника 3.9% 100г х6 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2521,7 +2602,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 315,
-                                    "name2": "Творог Фрукт Агуша Ябл Банан 3.9% 100г х12 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Ябл Банан 3.9% 100г х12 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2529,7 +2610,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 316,
-                                    "name2": "Творог Фрукт Агуша Ябл Банан 3.9% 100г х6 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт Агуша Ябл Банан 3.9% 100г х6 Ван ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2537,7 +2618,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 317,
-                                    "name2": "ДП Творог дет Агуша Злаки 3.9% 100г ванн 6Х",
+                                    type: "product", "name": "ДП Творог дет Агуша Злаки 3.9% 100г ванн 6Х",
                                     "level4": "АГУША",
                                     "level5": "ЗЛАКИ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2545,7 +2626,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 318,
-                                    "name2": "Твор фр Агуша МалЧернСморШипов 3.8% 100г ван 6Х",
+                                    type: "product", "name": "Твор фр Агуша МалЧернСморШипов 3.8% 100г ван 6Х",
                                     "level4": "АГУША",
                                     "level5": "МАЛИНА, ЧЕРНАЯ СМОРОДИНА, ШИПОВНИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2553,7 +2634,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 319,
-                                    "name2": "Твор фр АгушЗасып-ка КлубБан+Мелис 3.8%100г ван 6Х",
+                                    type: "product", "name": "Твор фр АгушЗасып-ка КлубБан+Мелис 3.8%100г ван 6Х",
                                     "level4": "АГУША",
                                     "level5": "КЛУБНИКА, БАНАН, МЕЛИССА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2561,7 +2642,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 320,
-                                    "name2": "Твор фр АгушЗасып КлубБанМелис 3.8%100г ван НД 6Х",
+                                    type: "product", "name": "Твор фр АгушЗасып КлубБанМелис 3.8%100г ван НД 6Х",
                                     "level4": "АГУША",
                                     "level5": "КЛУБНИКА, БАНАН, МЕЛИССА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2569,7 +2650,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 321,
-                                    "name2": "ТворДвусл Агуша ЯСАМ! КлубВаниль 3.8% 100г ван 6Х",
+                                    type: "product", "name": "ТворДвусл Агуша ЯСАМ! КлубВаниль 3.8% 100г ван 6Х",
                                     "level4": "АГУША Я САМ",
                                     "level5": "КЛУБНИКА-ВАНИЛЬ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2577,7 +2658,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 322,
-                                    "name2": "ТворДвусл АгушаЯСАМ! МалБанПечен 3.8% 100г ван 6Х",
+                                    type: "product", "name": "ТворДвусл АгушаЯСАМ! МалБанПечен 3.8% 100г ван 6Х",
                                     "level4": "АГУША Я САМ",
                                     "level5": "МАЛИНА, БАНАН, ПЕЧЕНЬЕ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2585,7 +2666,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 323,
-                                    "name2": "Творог фрук Агуша АбрикМорковь 3.9% 100г ван НД 6Х",
+                                    type: "product", "name": "Творог фрук Агуша АбрикМорковь 3.9% 100г ван НД 6Х",
                                     "level4": "АГУША",
                                     "level5": "АБРИКОС-МОРКОВЬ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2593,7 +2674,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 324,
-                                    "name2": "Творог фрук Агуша Абрикос-Морковь 3.9% 100г ван 6Х",
+                                    type: "product", "name": "Творог фрук Агуша Абрикос-Морковь 3.9% 100г ван 6Х",
                                     "level4": "АГУША",
                                     "level5": "АБРИКОС-МОРКОВЬ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2601,7 +2682,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 325,
-                                    "name2": "Творог фрук Агуша Мультифр 3.9% 100г ван НД 6Х",
+                                    type: "product", "name": "Творог фрук Агуша Мультифр 3.9% 100г ван НД 6Х",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2609,7 +2690,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 326,
-                                    "name2": "Творог фрук Агуша Персик 3.9% 100г Ванн НД 6Х",
+                                    type: "product", "name": "Творог фрук Агуша Персик 3.9% 100г Ванн НД 6Х",
                                     "level4": "АГУША",
                                     "level5": "ПЕРСИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2617,7 +2698,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 327,
-                                    "name2": "Творог фрук Агуша Черника 3.9% 100г ванн НД 6Х",
+                                    type: "product", "name": "Творог фрук Агуша Черника 3.9% 100г ванн НД 6Х",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2625,7 +2706,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 328,
-                                    "name2": "Творог фрук Агуша ЯблокоБанан 3.9% 100г ван НД 6Х",
+                                    type: "product", "name": "Творог фрук Агуша ЯблокоБанан 3.9% 100г ван НД 6Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2633,7 +2714,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 329,
-                                    "name2": "Творог фрукт Агуша Груша 3.9% 100г ван 6Х",
+                                    type: "product", "name": "Творог фрукт Агуша Груша 3.9% 100г ван 6Х",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2641,7 +2722,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 330,
-                                    "name2": "Творог фрукт Агуша Груша 3.9% 100г ван НД 6Х",
+                                    type: "product", "name": "Творог фрукт Агуша Груша 3.9% 100г ван НД 6Х",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2649,7 +2730,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 331,
-                                    "name2": "Творог фрукт Агуша Мультифрукт 3.9% 100г ван 6Х",
+                                    type: "product", "name": "Творог фрукт Агуша Мультифрукт 3.9% 100г ван 6Х",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2657,7 +2738,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 332,
-                                    "name2": "Творог фрукт Агуша Персик 3.9% 100г Ванн 6Х",
+                                    type: "product", "name": "Творог фрукт Агуша Персик 3.9% 100г Ванн 6Х",
                                     "level4": "АГУША",
                                     "level5": "ПЕРСИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2665,7 +2746,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 333,
-                                    "name2": "Творог фрукт Агуша Черника 3.9% 100г ван 6Х",
+                                    type: "product", "name": "Творог фрукт Агуша Черника 3.9% 100г ван 6Х",
                                     "level4": "АГУША",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2673,7 +2754,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 334,
-                                    "name2": "Творог фрукт Агуша Яблоко-Банан 3.9% 100г ван 6Х",
+                                    type: "product", "name": "Творог фрукт Агуша Яблоко-Банан 3.9% 100г ван 6Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -2686,16 +2767,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 335,
                     "name": "Фруктовые Пюре",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 336,
                             "name": "Пюре Фруктово-Зерновое",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 337,
-                                    "name2": "ПюреФрЗерн Агуша ЯблПерсОвсян 130г ПаучП 10X",
+                                    type: "product", "name": "ПюреФрЗерн Агуша ЯблПерсОвсян 130г ПаучП 10X",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ПЕРСИК, ОВСЯНКА",
                                     "level6": "ДОЙ-ПАК",
@@ -2703,7 +2784,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 338,
-                                    "name2": "ПюреФрЗернАгуша ЯблБанКлубнМультизл 130г ПаучП 10X",
+                                    type: "product", "name": "ПюреФрЗернАгуша ЯблБанКлубнМультизл 130г ПаучП 10X",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, БАНАН, КЛУБНИКА, ЗЛАКИ",
                                     "level6": "ДОЙ-ПАК",
@@ -2711,7 +2792,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 339,
-                                    "name2": "ПюреФрЗернАгуша ЯблЧерникЗемлМультизл 90гПаучП 10X",
+                                    type: "product", "name": "ПюреФрЗернАгуша ЯблЧерникЗемлМультизл 90гПаучП 10X",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ЧЕРНИКА, ЗЕМЛЯНИКА, ЗЛАКИ",
                                     "level6": "ДОЙ-ПАК",
@@ -2722,11 +2803,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 340,
                             "name": "Пюре Фруктово-Овощное",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 341,
-                                    "name2": "ПюреФрОвощ Агуша ЯблГрушБрокколи 90г ПаучП 10X",
+                                    type: "product", "name": "ПюреФрОвощ Агуша ЯблГрушБрокколи 90г ПаучП 10X",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, МАЛИНА, ШИПОВНИК",
                                     "level6": "ДОЙ-ПАК",
@@ -2734,7 +2815,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 342,
-                                    "name2": "ПюреФрОвощ Агуша ЯблокМорковьАбрик 90г ПаучП 10Х",
+                                    type: "product", "name": "ПюреФрОвощ Агуша ЯблокМорковьАбрик 90г ПаучП 10Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, МОРКОВЬ, АБРИКОС",
                                     "level6": "ДОЙ-ПАК",
@@ -2742,7 +2823,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 343,
-                                    "name2": "ПюреФрОвощ Агуша ЯблТыкваПерсБанан 90г ПаучП 10Х",
+                                    type: "product", "name": "ПюреФрОвощ Агуша ЯблТыкваПерсБанан 90г ПаучП 10Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ТЫКВА, ПЕРСИК, БАНАН",
                                     "level6": "ДОЙ-ПАК",
@@ -2753,11 +2834,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 344,
                             "name": "Фруктово-Молочные Пюре",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 345,
-                                    "name2": "Пюре Агуша Ябл Банан Сливки 200г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Агуша Ябл Банан Сливки 200г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН-СЛИВКИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2765,7 +2846,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 346,
-                                    "name2": "Пюре Агуша Ябл Банан Сливки 200г х8 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Агуша Ябл Банан Сливки 200г х8 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН-СЛИВКИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2773,7 +2854,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 347,
-                                    "name2": "Пюре Агуша Ябл Сливки 200г х2 х4 МП СБн ДП",
+                                    type: "product", "name": "Пюре Агуша Ябл Сливки 200г х2 х4 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-СЛИВКИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2781,7 +2862,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 348,
-                                    "name2": "Пюре Агуша Ябл Сливки 200г х2 х4 МП СБн ДП",
+                                    type: "product", "name": "Пюре Агуша Ябл Сливки 200г х2 х4 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-СЛИВКИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2789,7 +2870,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 349,
-                                    "name2": "Пюре Агуша Ябл Сливки 200г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Агуша Ябл Сливки 200г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-СЛИВКИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2797,7 +2878,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 350,
-                                    "name2": "Пюре Агуша Ябл Сливки 200г х8 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Агуша Ябл Сливки 200г х8 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-СЛИВКИ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2805,7 +2886,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 351,
-                                    "name2": "Пюре Агуша Ябл Творог 115г х12 СБн ДП БЛР",
+                                    type: "product", "name": "Пюре Агуша Ябл Творог 115г х12 СБн ДП БЛР",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ТВОРОГ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2813,7 +2894,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 352,
-                                    "name2": "ДП Пюре фр Агуша ЯблКлубнТворог 90г PouchPack 10Х",
+                                    type: "product", "name": "ДП Пюре фр Агуша ЯблКлубнТворог 90г PouchPack 10Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, КЛУБНИКА, ТВОРОГ",
                                     "level6": "ДОЙ-ПАК",
@@ -2821,7 +2902,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 353,
-                                    "name2": "ДП Пюре фр Агуша ЯблТворПеченье 90г PouchPack 10Х",
+                                    type: "product", "name": "ДП Пюре фр Агуша ЯблТворПеченье 90г PouchPack 10Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ПЕЧЕНЬЕ, ТВОРОГ",
                                     "level6": "ДОЙ-ПАК",
@@ -2832,11 +2913,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 354,
                             "name": "Фруктовые Пюре",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 355,
-                                    "name2": "ДП Пюре конс фр АгушаЯСАМ Бан 0% 1х10х90г Doy-pack",
+                                    type: "product", "name": "ДП Пюре конс фр АгушаЯСАМ Бан 0% 1х10х90г Doy-pack",
                                     "level4": "АГУША Я САМ",
                                     "level5": "БАНАН",
                                     "level6": "ДОЙ-ПАК",
@@ -2844,7 +2925,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 356,
-                                    "name2": "ДП Пюре конс фр АгушаЯСАМ яб-пер 0% 1х10х90г DoyР",
+                                    type: "product", "name": "ДП Пюре конс фр АгушаЯСАМ яб-пер 0% 1х10х90г DoyР",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО, ПЕРСИК",
                                     "level6": "ДОЙ-ПАК",
@@ -2852,7 +2933,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 357,
-                                    "name2": "ДП Пюре фр Агуша Я САМ! груша 0% 1х10х90г Doy-pack",
+                                    type: "product", "name": "ДП Пюре фр Агуша Я САМ! груша 0% 1х10х90г Doy-pack",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ГРУША",
                                     "level6": "ДОЙ-ПАК",
@@ -2860,7 +2941,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 358,
-                                    "name2": "ДП Пюре фр Агуша ЯСАМ! ябл-бан-печ 1х10х90г ДойПак",
+                                    type: "product", "name": "ДП Пюре фр Агуша ЯСАМ! ябл-бан-печ 1х10х90г ДойПак",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО, БАНАН, ПЕЧЕНЬЕ",
                                     "level6": "ДОЙ-ПАК",
@@ -2868,7 +2949,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 359,
-                                    "name2": "Пюре Фрукт Агуша Банан 90г х10 ДойП ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Банан 90г х10 ДойП ДП",
                                     "level4": "АГУША",
                                     "level5": "БАНАН",
                                     "level6": "ДОЙ-ПАК",
@@ -2876,7 +2957,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 360,
-                                    "name2": "Пюре фрукт Агуша Груш-Ябл 6х2х115г Кластер",
+                                    type: "product", "name": "Пюре фрукт Агуша Груш-Ябл 6х2х115г Кластер",
                                     "level4": "АГУША",
                                     "level5": "ГРУША-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2884,7 +2965,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 361,
-                                    "name2": "Пюре Фрукт Агуша Груша 115г х12 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Груша 115г х12 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2892,7 +2973,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 362,
-                                    "name2": "Пюре Фрукт Агуша Груша 115г х2 х6 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Груша 115г х2 х6 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2900,7 +2981,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 363,
-                                    "name2": "Пюре Фрукт Агуша Груша 200г х8 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Груша 200г х8 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2908,7 +2989,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 364,
-                                    "name2": "Пюре Фрукт Агуша Груша 90г х10 ДойП ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Груша 90г х10 ДойП ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ДОЙ-ПАК",
@@ -2916,7 +2997,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 365,
-                                    "name2": "Пюре Фрукт Агуша Груша Ябл 115г х12 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Груша Ябл 115г х12 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ГРУША-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2924,7 +3005,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 366,
-                                    "name2": "Пюре Фрукт Агуша Ябл Банан 115г х12 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Банан 115г х12 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2932,7 +3013,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 367,
-                                    "name2": "Пюре Фрукт Агуша Ябл Банан 115г х2 х6 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Банан 115г х2 х6 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2940,7 +3021,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 368,
-                                    "name2": "Пюре Фрукт Агуша Ябл Банан 200г х8 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Банан 200г х8 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2948,7 +3029,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 369,
-                                    "name2": "Пюре Фрукт Агуша Ябл Груша 200г х8 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Груша 200г х8 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ГРУША-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2956,7 +3037,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 370,
-                                    "name2": "Пюре Фрукт Агуша Ябл КусЯбл 105г х2 х6 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл КусЯбл 105г х2 х6 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2964,7 +3045,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 371,
-                                    "name2": "Пюре Фрукт Агуша Ябл Персик 115г х12 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Персик 115г х12 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2972,7 +3053,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 372,
-                                    "name2": "Пюре Фрукт Агуша Ябл Персик 115г х2 х6 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Персик 115г х2 х6 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2980,7 +3061,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 373,
-                                    "name2": "Пюре Фрукт Агуша Ябл Персик 90г х10 ДойП ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Персик 90г х10 ДойП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ДОЙ-ПАК",
@@ -2988,7 +3069,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 374,
-                                    "name2": "Пюре Фрукт Агуша Ябл с КусЯбл 105гх12 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл с КусЯбл 105гх12 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -2996,7 +3077,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 375,
-                                    "name2": "Пюре Фрукт Агуша ЯблГруш КусЯбл 105гх2х6 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша ЯблГруш КусЯбл 105гх2х6 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3004,7 +3085,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 376,
-                                    "name2": "Пюре Фрукт Агуша ЯблГруш с КусЯбл 105г х12 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша ЯблГруш с КусЯбл 105г х12 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3012,7 +3093,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 377,
-                                    "name2": "Пюре Фрукт Агуша ЯблГрушБанПер 115гх12СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша ЯблГрушБанПер 115гх12СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ГРУША, БАНАН, ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3020,7 +3101,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 378,
-                                    "name2": "Пюре Фрукт Агуша Яблоко 115г х12 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко 115г х12 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3028,7 +3109,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 379,
-                                    "name2": "Пюре Фрукт Агуша Яблоко 115г х2 х6 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко 115г х2 х6 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3036,7 +3117,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 380,
-                                    "name2": "Пюре Фрукт Агуша Яблоко 200г х2 х4 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко 200г х2 х4 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3044,7 +3125,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 381,
-                                    "name2": "Пюре Фрукт Агуша Яблоко 200г х2 х4 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко 200г х2 х4 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3052,7 +3133,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 382,
-                                    "name2": "Пюре Фрукт Агуша Яблоко 200г х8 СБн ДП Промо",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко 200г х8 СБн ДП Промо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3060,7 +3141,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 383,
-                                    "name2": "Пюре Фрукт Агуша Яблоко 90г х10 ДойП ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко 90г х10 ДойП ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ДОЙ-ПАК",
@@ -3068,7 +3149,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 384,
-                                    "name2": "Пюре Фрукт Агуша Яблоко с КусЯбл 105г х12 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко с КусЯбл 105г х12 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3076,7 +3157,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 385,
-                                    "name2": "Пюре Фрукт Агуша ЯблПерс КусЯбл 190гх2х4 МП СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша ЯблПерс КусЯбл 190гх2х4 МП СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3084,7 +3165,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 386,
-                                    "name2": "Пюре Фрукт Агуша ЯблПерс с КусЯбл190гх8СБн ДППромо",
+                                    type: "product", "name": "Пюре Фрукт Агуша ЯблПерс с КусЯбл190гх8СБн ДППромо",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3092,7 +3173,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 387,
-                                    "name2": "Пюре Фрукт Агуша ЯблПерсик с КусЯбл 190г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша ЯблПерсик с КусЯбл 190г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3100,7 +3181,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 388,
-                                    "name2": "Пюре Фрукт АгушаЯблГруш с КусЯбл105гх12СБн ДППромо",
+                                    type: "product", "name": "Пюре Фрукт АгушаЯблГруш с КусЯбл105гх12СБн ДППромо",
                                     "level4": "АГУША",
                                     "level5": "ГРУША-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3108,7 +3189,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 389,
-                                    "name2": "Пюре Фрукт АгушаЯСам МультФр 90г х10 ДойП ДП",
+                                    type: "product", "name": "Пюре Фрукт АгушаЯСам МультФр 90г х10 ДойП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ДОЙ-ПАК",
@@ -3116,7 +3197,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 390,
-                                    "name2": "Пюре Фрукт АгушаЯСам Ябл Бан Печен 90гх10 ДойП ДП",
+                                    type: "product", "name": "Пюре Фрукт АгушаЯСам Ябл Бан Печен 90гх10 ДойП ДП",
                                     "level4": "АГУША Я САМ",
                                     "level5": "ЯБЛОКО, БАНАН, ПЕЧЕНЬЕ",
                                     "level6": "ДОЙ-ПАК",
@@ -3124,7 +3205,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 391,
-                                    "name2": "ДП Пюре фр Агуша Ябл-бан-печ 90г х10 пауч-пак",
+                                    type: "product", "name": "ДП Пюре фр Агуша Ябл-бан-печ 90г х10 пауч-пак",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, БАНАН, ПЕЧЕНЬЕ",
                                     "level6": "ДОЙ-ПАК",
@@ -3132,7 +3213,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 392,
-                                    "name2": "ДП Пюре фр Агуша ЯблЕжевикаМал 90г PouchPack 10Х",
+                                    type: "product", "name": "ДП Пюре фр Агуша ЯблЕжевикаМал 90г PouchPack 10Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ЕЖЕВИКА, МАЛИНА",
                                     "level6": "ДОЙ-ПАК",
@@ -3140,7 +3221,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 393,
-                                    "name2": "ДП Пюре фр Агуша ЯблКлубнМалина 90г PouchPack 10Х",
+                                    type: "product", "name": "ДП Пюре фр Агуша ЯблКлубнМалина 90г PouchPack 10Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, КЛУБНИКА, МАЛИНА",
                                     "level6": "ДОЙ-ПАК",
@@ -3148,7 +3229,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 394,
-                                    "name2": "ДП Пюре фр Агуша ЯблМалШипов 90г PouchPack 10Х",
+                                    type: "product", "name": "ДП Пюре фр Агуша ЯблМалШипов 90г PouchPack 10Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, МАЛИНА, ШИПОВНИК",
                                     "level6": "ДОЙ-ПАК",
@@ -3156,7 +3237,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 395,
-                                    "name2": "ДП Пюре фрукт Агуша Банан 90г х10 пауч-пак",
+                                    type: "product", "name": "ДП Пюре фрукт Агуша Банан 90г х10 пауч-пак",
                                     "level4": "АГУША",
                                     "level5": "БАНАН",
                                     "level6": "ДОЙ-ПАК",
@@ -3164,7 +3245,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 396,
-                                    "name2": "ДП Пюре фрукт Агуша Груша 90г х10 пауч пак",
+                                    type: "product", "name": "ДП Пюре фрукт Агуша Груша 90г х10 пауч пак",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "ДОЙ-ПАК",
@@ -3172,7 +3253,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 397,
-                                    "name2": "ДП Пюре фрукт Агуша Мультифрукт 90г х10 пауч-пак",
+                                    type: "product", "name": "ДП Пюре фрукт Агуша Мультифрукт 90г х10 пауч-пак",
                                     "level4": "АГУША",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ДОЙ-ПАК",
@@ -3180,7 +3261,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 398,
-                                    "name2": "ДП Пюре фрукт Агуша Ябл-персик 90г х10 пауч-пак",
+                                    type: "product", "name": "ДП Пюре фрукт Агуша Ябл-персик 90г х10 пауч-пак",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "ДОЙ-ПАК",
@@ -3188,7 +3269,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 399,
-                                    "name2": "ДП Пюре фрукт Агуша Яблоко 90г пауч-пак IMA 10Х",
+                                    type: "product", "name": "ДП Пюре фрукт Агуша Яблоко 90г пауч-пак IMA 10Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ДОЙ-ПАК",
@@ -3196,7 +3277,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 400,
-                                    "name2": "ДП Пюре фрукт Агуша Яблоко 90г х10 пауч-пак",
+                                    type: "product", "name": "ДП Пюре фрукт Агуша Яблоко 90г х10 пауч-пак",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ДОЙ-ПАК",
@@ -3204,7 +3285,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 401,
-                                    "name2": "Пюре фрук Агуша Красн и черн.смород 115г х12 СБн",
+                                    type: "product", "name": "Пюре фрук Агуша Красн и черн.смород 115г х12 СБн",
                                     "level4": "АГУША",
                                     "level5": "СМОРОДИНА ЧЕРНАЯ-СМОРОДИНА КРАСНАЯ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3212,7 +3293,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 402,
-                                    "name2": "Пюре Фрукт Агуша Груша 115г х12 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Груша 115г х12 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3220,7 +3301,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 403,
-                                    "name2": "Пюре Фрукт Агуша Груша 200г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Груша 200г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3228,7 +3309,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 404,
-                                    "name2": "Пюре Фрукт Агуша Груша Ябл 115г х12 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Груша Ябл 115г х12 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3236,7 +3317,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 405,
-                                    "name2": "Пюре фрукт Агуша Ябл-Черника-Вишня 115г х12 СБн",
+                                    type: "product", "name": "Пюре фрукт Агуша Ябл-Черника-Вишня 115г х12 СБн",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ЧЕРНИКА-ВИШНЯ",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3244,7 +3325,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 406,
-                                    "name2": "Пюре Фрукт Агуша Ябл Банан 115г х12 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Банан 115г х12 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3252,7 +3333,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 407,
-                                    "name2": "Пюре Фрукт Агуша Ябл Банан 200г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Банан 200г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3260,7 +3341,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 408,
-                                    "name2": "Пюре Фрукт Агуша Ябл Груша 200г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Груша 200г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ГРУША-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3268,7 +3349,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 409,
-                                    "name2": "Пюре Фрукт Агуша Ябл Персик 115г х12 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Ябл Персик 115г х12 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3276,7 +3357,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 410,
-                                    "name2": "Пюре Фрукт Агуша ЯблГрушБанПер 0% 115г х12 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша ЯблГрушБанПер 0% 115г х12 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ГРУША, БАНАН, ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3284,7 +3365,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 411,
-                                    "name2": "Пюре фрукт Агуша Яблоко-Абрикос 115г х12 СБн",
+                                    type: "product", "name": "Пюре фрукт Агуша Яблоко-Абрикос 115г х12 СБн",
                                     "level4": "АГУША",
                                     "level5": "АБРИКОС-ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3292,7 +3373,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 412,
-                                    "name2": "Пюре фрукт Агуша Яблоко-Груша-Перс 115г х12 СБн",
+                                    type: "product", "name": "Пюре фрукт Агуша Яблоко-Груша-Перс 115г х12 СБн",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО-ГРУША-ПЕРСИК",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3300,7 +3381,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 413,
-                                    "name2": "Пюре Фрукт Агуша Яблоко 115г х12 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко 115г х12 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3308,7 +3389,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 414,
-                                    "name2": "Пюре Фрукт Агуша Яблоко 200г х8 СБн ДП",
+                                    type: "product", "name": "Пюре Фрукт Агуша Яблоко 200г х8 СБн ДП",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО",
                                     "level6": "СТЕКЛЯННАЯ БАНКА",
@@ -3316,7 +3397,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 415,
-                                    "name2": "ПюреФр Агуша ЯблКлубЗемлКлюк 65мл TCASL 16Х",
+                                    type: "product", "name": "ПюреФр Агуша ЯблКлубЗемлКлюк 65мл TCASL 16Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, КЛУБНИКА, ЗЕМЛЯНИКА, КЛЮКВА",
                                     "level6": "ТЕТРА КЛАССИК АСЕПТИК СЛИМ",
@@ -3324,7 +3405,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 416,
-                                    "name2": "ПюреФр Агуша ЯблСморЧернЕжевика 65мл TCASL 16Х",
+                                    type: "product", "name": "ПюреФр Агуша ЯблСморЧернЕжевика 65мл TCASL 16Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ЧЕРНАЯ СМОРОДИНА, ЕЖЕВИКА",
                                     "level6": "ТЕТРА КЛАССИК АСЕПТИК СЛИМ",
@@ -3332,7 +3413,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 417,
-                                    "name2": "ПюреФр Агуша ЯблЧерникШиповн 65мл TCASL 16Х",
+                                    type: "product", "name": "ПюреФр Агуша ЯблЧерникШиповн 65мл TCASL 16Х",
                                     "level4": "АГУША",
                                     "level5": "ЯБЛОКО, ЧЕРНИКА, ШИПОВНИК",
                                     "level6": "ТЕТРА КЛАССИК АСЕПТИК СЛИМ",
@@ -3347,21 +3428,21 @@ export const productsCategoriesTree : Node[]=
         {
             "id": 418,
             "name": "Молочные Продукты",
-            "level": 0,
+            "level": 0, type: "nodes",
             "nodes": [
                 {
                     "id": 419,
                     "name": "Жидкие Молочные Десерты",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 420,
                             "name": "Молочный Коктейль",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 421,
-                                    "name2": "Кокт Мол стерил Чудо Коллекц Глясе 0.1% 0.2лх27 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Коллекц Глясе 0.1% 0.2лх27 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "ГЛЯСЕ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3369,7 +3450,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 422,
-                                    "name2": "Кокт Мол стерил Чудо Коллекц Капуч 0.1% 0.2лх27 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Коллекц Капуч 0.1% 0.2лх27 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "КАПУЧИНО",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3377,7 +3458,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 423,
-                                    "name2": "Кокт Мол стерил ЧудоДетки Клуб 3.2% 200млх27 БЗ ДП",
+                                    type: "product", "name": "Кокт Мол стерил ЧудоДетки Клуб 3.2% 200млх27 БЗ ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3385,7 +3466,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 424,
-                                    "name2": "Кокт Мол стерил ЧудоДетки Шок 2.5%200мл х27 БЗ ДП",
+                                    type: "product", "name": "Кокт Мол стерил ЧудоДетки Шок 2.5%200мл х27 БЗ ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3393,7 +3474,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 425,
-                                    "name2": "Кокт Мол стерил ЧудоДетки Шок 2.5%900мл х12 ТБА ДП",
+                                    type: "product", "name": "Кокт Мол стерил ЧудоДетки Шок 2.5%900мл х12 ТБА ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3401,7 +3482,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 426,
-                                    "name2": "Коктейль аром Чудо ваниль 2% 1х12х950г",
+                                    type: "product", "name": "Коктейль аром Чудо ваниль 2% 1х12х950г",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3409,7 +3490,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 427,
-                                    "name2": "Микс: КоктМол Чудо Клуб,Вани 2% 0.2л Слим (кор)",
+                                    type: "product", "name": "Микс: КоктМол Чудо Клуб,Вани 2% 0.2л Слим (кор)",
                                     "level4": "ЧУДО",
                                     "level5": "АССОРТИ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3417,7 +3498,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 428,
-                                    "name2": "Микс:КоктМолЧудоШокМолШокБелБанКар3% 0.2л СЛ (кор)",
+                                    type: "product", "name": "Микс:КоктМолЧудоШокМолШокБелБанКар3% 0.2л СЛ (кор)",
                                     "level4": "ЧУДО",
                                     "level5": "АССОРТИ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3425,7 +3506,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 429,
-                                    "name2": "Молоко аром Чудо бан-кар 2% 1х18х0.2л TBAS",
+                                    type: "product", "name": "Молоко аром Чудо бан-кар 2% 1х18х0.2л TBAS",
                                     "level4": "ЧУДО",
                                     "level5": "БАНАН-КАРАМЕЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3433,7 +3514,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 430,
-                                    "name2": "Молоко аром Чудо бан-кар 2% 1х27х0.2л TBAS",
+                                    type: "product", "name": "Молоко аром Чудо бан-кар 2% 1х27х0.2л TBAS",
                                     "level4": "ЧУДО",
                                     "level5": "БАНАН-КАРАМЕЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3441,7 +3522,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 431,
-                                    "name2": "Кокт мол стер Чудо банан-карам 2% 0.2л TBAS 27Х",
+                                    type: "product", "name": "Кокт мол стер Чудо банан-карам 2% 0.2л TBAS 27Х",
                                     "level4": "ЧУДО",
                                     "level5": "БАНАН-КАРАМЕЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3449,7 +3530,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 432,
-                                    "name2": "Кокт мол стер Чудо Ваниль 2% 0.2л TBASl 27Х",
+                                    type: "product", "name": "Кокт мол стер Чудо Ваниль 2% 0.2л TBASl 27Х",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3457,7 +3538,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 433,
-                                    "name2": "Кокт мол стер Чудо Ваниль 2% 0.2л TBASl 27Х",
+                                    type: "product", "name": "Кокт мол стер Чудо Ваниль 2% 0.2л TBASl 27Х",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3465,7 +3546,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 434,
-                                    "name2": "Кокт мол стер Чудо Клубника 2% 0.2л ТВАSl 27Х",
+                                    type: "product", "name": "Кокт мол стер Чудо Клубника 2% 0.2л ТВАSl 27Х",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3473,7 +3554,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 435,
-                                    "name2": "Кокт мол стер ЧудоДетки Шокол 2.5% 200мл х18 TBA",
+                                    type: "product", "name": "Кокт мол стер ЧудоДетки Шокол 2.5% 200мл х18 TBA",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3481,7 +3562,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 436,
-                                    "name2": "Кокт Мол стерил Чудо Банан Карамель 2% 0.2л х27 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Банан Карамель 2% 0.2л х27 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "БАНАН-КАРАМЕЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3489,7 +3570,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 437,
-                                    "name2": "Кокт Мол стерил Чудо Банан Карамель 2% 960г х12 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Банан Карамель 2% 960г х12 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "БАНАН-КАРАМЕЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3497,7 +3578,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 438,
-                                    "name2": "Кокт Мол стерил Чудо Белый Шоколад 3% 0.2л х27 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Белый Шоколад 3% 0.2л х27 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД БЕЛЫЙ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3505,7 +3586,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 439,
-                                    "name2": "Кокт Мол стерил Чудо Ваниль 2% 0.2л х27 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Ваниль 2% 0.2л х27 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3513,7 +3594,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 440,
-                                    "name2": "Кокт Мол стерил Чудо Ваниль 2% 960г х12 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Ваниль 2% 960г х12 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3521,7 +3602,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 441,
-                                    "name2": "Кокт Мол стерил Чудо взб Ваниль 5% 950г х12 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо взб Ваниль 5% 950г х12 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3529,7 +3610,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 442,
-                                    "name2": "Кокт Мол стерил Чудо взб Клуб 5% 950г х12 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо взб Клуб 5% 950г х12 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3537,7 +3618,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 443,
-                                    "name2": "Кокт Мол стерил Чудо Клуб 2% 0.2л х18 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Клуб 2% 0.2л х18 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3545,7 +3626,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 444,
-                                    "name2": "Кокт Мол стерил Чудо Клуб 2% 0.2л х27 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Клуб 2% 0.2л х27 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3553,7 +3634,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 445,
-                                    "name2": "Кокт Мол стерил Чудо Клуб 2% 950г х8 ПЭТ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Клуб 2% 950г х8 ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -3561,7 +3642,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 446,
-                                    "name2": "Кокт Мол стерил Чудо Клуб 2% 960г х12 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Клуб 2% 960г х12 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3569,7 +3650,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 447,
-                                    "name2": "Кокт Мол стерил Чудо Молоч Шоколад 3% 0.2л х27 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Молоч Шоколад 3% 0.2л х27 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД МОЛОЧНЫЙ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3577,7 +3658,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 448,
-                                    "name2": "Кокт Мол стерил Чудо Шоколад 2% 950г х8 ПЭТ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Шоколад 2% 950г х8 ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ПЭТ",
@@ -3585,7 +3666,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 449,
-                                    "name2": "Кокт Мол стерил Чудо Шоколад 2% 960г х12 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Шоколад 2% 960г х12 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3593,7 +3674,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 450,
-                                    "name2": "Кокт Мол стерил Чудо Шоколад 3% 0.2л х27 СЛ",
+                                    type: "product", "name": "Кокт Мол стерил Чудо Шоколад 3% 0.2л х27 СЛ",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3601,7 +3682,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 451,
-                                    "name2": "Кокт Мол стерил ЧудоДетки Клуб 3.2% 200млх18 БЗ ДП",
+                                    type: "product", "name": "Кокт Мол стерил ЧудоДетки Клуб 3.2% 200млх18 БЗ ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3609,7 +3690,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 452,
-                                    "name2": "Кокт Мол ультрап Чудо Ваниль 2% 270г х8 ПЭТ",
+                                    type: "product", "name": "Кокт Мол ультрап Чудо Ваниль 2% 270г х8 ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ПЭТ",
@@ -3617,7 +3698,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 453,
-                                    "name2": "Кокт Мол ультрап Чудо Клуб 2% 270г х8 ПЭТ",
+                                    type: "product", "name": "Кокт Мол ультрап Чудо Клуб 2% 270г х8 ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -3625,7 +3706,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 454,
-                                    "name2": "Кокт Мол ультрап Чудо Шоколад 2% 270г х8 ПЭТ",
+                                    type: "product", "name": "Кокт Мол ультрап Чудо Шоколад 2% 270г х8 ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ПЭТ",
@@ -3633,7 +3714,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 455,
-                                    "name2": "Кокт Мол ультрап ЧудоДетки Клуб 3.2% 255млх8ПЭТ ДП",
+                                    type: "product", "name": "Кокт Мол ультрап ЧудоДетки Клуб 3.2% 255млх8ПЭТ ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -3641,7 +3722,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 456,
-                                    "name2": "Кокт Мол ультрап ЧудоДетки Шок 2.5% 255млх8 ПЭТ ДП",
+                                    type: "product", "name": "Кокт Мол ультрап ЧудоДетки Шок 2.5% 255млх8 ПЭТ ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ПЭТ",
@@ -3649,7 +3730,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 457,
-                                    "name2": "КоктМолоч Чудо МорожЯгодн 2% 960г TBASl 12Х",
+                                    type: "product", "name": "КоктМолоч Чудо МорожЯгодн 2% 960г TBASl 12Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЯГОДНОЕ МОРОЖЕНОЕ",
                                     "level6": "ТЕТРА СЛИМ",
@@ -3657,7 +3738,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 458,
-                                    "name2": "КоктМолоч Чудо МорожЯгодное 2% 200мл TBASl 27Х",
+                                    type: "product", "name": "КоктМолоч Чудо МорожЯгодное 2% 200мл TBASl 27Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЯГОДНОЕ МОРОЖЕНОЕ",
                                     "level6": "ТЕТРА СЛИМ",
@@ -3665,7 +3746,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 459,
-                                    "name2": "КоктМолоч Чудо МорожЯгодное 2% 950г ПЭТ 8Х",
+                                    type: "product", "name": "КоктМолоч Чудо МорожЯгодное 2% 950г ПЭТ 8Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЯГОДНОЕ МОРОЖЕНОЕ",
                                     "level6": "ПЭТ",
@@ -3673,7 +3754,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 460,
-                                    "name2": "КоктМолСтер Чудо  Клубника 3.2% 200мл Base 18Х",
+                                    type: "product", "name": "КоктМолСтер Чудо  Клубника 3.2% 200мл Base 18Х",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3681,7 +3762,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 461,
-                                    "name2": "КоктМолСтер Чудо ПломбирВанил 2.5% 200мл ТВА 18Х",
+                                    type: "product", "name": "КоктМолСтер Чудо ПломбирВанил 2.5% 200мл ТВА 18Х",
                                     "level4": "ЧУДО",
                                     "level5": "ПЛОМБИР ВАНИЛЬНЫЙ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3689,7 +3770,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 462,
-                                    "name2": "КоктМолСтер Чудо Шоколад 2.5% 200мл Base 18Х",
+                                    type: "product", "name": "КоктМолСтер Чудо Шоколад 2.5% 200мл Base 18Х",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3697,7 +3778,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 463,
-                                    "name2": "КоктМолСтер ЧудоДет ПеченьеБан 2.5%200мл ТБАБ 18Х",
+                                    type: "product", "name": "КоктМолСтер ЧудоДет ПеченьеБан 2.5%200мл ТБАБ 18Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "БАНАН И ПЕЧЕНЬЕ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3705,7 +3786,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 464,
-                                    "name2": "КоктМолСтер ЧудоДет ПломбВанильн 2.5% 200млТВА 18Х",
+                                    type: "product", "name": "КоктМолСтер ЧудоДет ПломбВанильн 2.5% 200млТВА 18Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ПЛОМБИР ВАНИЛЬНЫЙ",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -3713,7 +3794,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 465,
-                                    "name2": "Молоко аром Чудо ваниль 2% 1х18х0.2л TBAS",
+                                    type: "product", "name": "Молоко аром Чудо ваниль 2% 1х18х0.2л TBAS",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -3721,7 +3802,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 466,
-                                    "name2": "Чудо молочное Шоколад 3% 1х6х950г ПЭТ",
+                                    type: "product", "name": "Чудо молочное Шоколад 3% 1х6х950г ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ПЭТ",
@@ -3732,11 +3813,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 467,
                             "name": "Сок С Молоком",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 468,
-                                    "name2": "Нап сывмол Мажитель Party ПинаКол 0.04% 0.25лх24ПЗ",
+                                    type: "product", "name": "Нап сывмол Мажитель Party ПинаКол 0.04% 0.25лх24ПЗ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "ПИНА-КОЛАДА",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3744,7 +3825,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 469,
-                                    "name2": "Нап сывмол Мажитель Party ПинаКол 0.05% 0.25лх24ПЗ",
+                                    type: "product", "name": "Нап сывмол Мажитель Party ПинаКол 0.05% 0.25лх24ПЗ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "ПИНА-КОЛАДА",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3752,7 +3833,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 470,
-                                    "name2": "Нап сывмол Мажитель Party ПинаКол 0.05% 950гх12 КФ",
+                                    type: "product", "name": "Нап сывмол Мажитель Party ПинаКол 0.05% 950гх12 КФ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "ПИНА-КОЛАДА",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -3760,7 +3841,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 471,
-                                    "name2": "Нап сывмол Мажитель Party Пинакол 0.04% 950гх12 КФ",
+                                    type: "product", "name": "Нап сывмол Мажитель Party Пинакол 0.04% 950гх12 КФ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "ПИНА-КОЛАДА",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3768,7 +3849,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 472,
-                                    "name2": "Нап сывмол Мажитель Груша Манго 0.05% 950г х12 КФ",
+                                    type: "product", "name": "Нап сывмол Мажитель Груша Манго 0.05% 950г х12 КФ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "ГРУША-МАНГО",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3776,7 +3857,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 473,
-                                    "name2": "Нап сывмол Мажитель Клуб 0.05% 950г х12 КФ",
+                                    type: "product", "name": "Нап сывмол Мажитель Клуб 0.05% 950г х12 КФ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3784,7 +3865,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 474,
-                                    "name2": "Нап сывмол Мажитель МультФр 0.05% 950г х12 КФ",
+                                    type: "product", "name": "Нап сывмол Мажитель МультФр 0.05% 950г х12 КФ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3792,7 +3873,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 475,
-                                    "name2": "Нап сывмол Мажитель Перс Марк 0.05% 950г х12 КФ",
+                                    type: "product", "name": "Нап сывмол Мажитель Перс Марк 0.05% 950г х12 КФ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "ПЕРСИК-МАРАКУЙЯ",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3800,7 +3881,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 476,
-                                    "name2": "Нап сывмол Мажитэль Клуб 0.05% 0.25л х24 ПЗ",
+                                    type: "product", "name": "Нап сывмол Мажитэль Клуб 0.05% 0.25л х24 ПЗ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3808,7 +3889,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 477,
-                                    "name2": "Нап сывмол Мажитэль МультФр 0.05% 0.25л х24 ПЗ",
+                                    type: "product", "name": "Нап сывмол Мажитэль МультФр 0.05% 0.25л х24 ПЗ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3816,7 +3897,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 478,
-                                    "name2": "Нап сывмол Мажитэль Перс Марк 0.05% 0.25л х24 ПЗ",
+                                    type: "product", "name": "Нап сывмол Мажитэль Перс Марк 0.05% 0.25л х24 ПЗ",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "ПЕРСИК-МАРАКУЙЯ",
                                     "level6": "ТЕТРА ПАК ПРИЗМА",
@@ -3824,7 +3905,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 479,
-                                    "name2": "НапСыворМол Мажитэль ЧерникЗемл 0.05% 950г CF 12Х",
+                                    type: "product", "name": "НапСыворМол Мажитэль ЧерникЗемл 0.05% 950г CF 12Х",
                                     "level4": "МАЖИТЭЛЬ",
                                     "level5": "ЧЕРНИКА И ЗЕМЛЯНИКА",
                                     "level6": "ТЕТРА ПРИЗМА",
@@ -3835,11 +3916,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 480,
                             "name": "Сок С Сывороткой",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 481,
-                                    "name2": "НапитСыворот МажитJ7 Мультифрукт 0.04% 950г ПЭТ 8Х",
+                                    type: "product", "name": "НапитСыворот МажитJ7 Мультифрукт 0.04% 950г ПЭТ 8Х",
                                     "level4": "МАЖИТЭЛЬ ДЖЕЙ7",
                                     "level5": "СМЕСЬ ФРУКТОВ",
                                     "level6": "ПЭТ",
@@ -3847,7 +3928,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 482,
-                                    "name2": "Нап сыв/сок МажитJ7 ГрейпфЛимАпел 0.04%950г ПЭТ 8Х",
+                                    type: "product", "name": "Нап сыв/сок МажитJ7 ГрейпфЛимАпел 0.04%950г ПЭТ 8Х",
                                     "level4": "МАЖИТЭЛЬ ДЖЕЙ7",
                                     "level5": "ГРЕЙПФРУТ, ЛИМОН, АПЕЛЬСИН",
                                     "level6": "ПЭТ",
@@ -3855,7 +3936,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 483,
-                                    "name2": "Нап сывор Мажитель J7 Ананас Манго 0.03% 270гх8ПЭТ",
+                                    type: "product", "name": "Нап сывор Мажитель J7 Ананас Манго 0.03% 270гх8ПЭТ",
                                     "level4": "МАЖИТЭЛЬ ДЖЕЙ7",
                                     "level5": "АНАНАС, МАНГО",
                                     "level6": "ПЭТ",
@@ -3863,7 +3944,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 484,
-                                    "name2": "Нап сывор Мажитель J7 Ананас Манго 0.03% 950гх8ПЭТ",
+                                    type: "product", "name": "Нап сывор Мажитель J7 Ананас Манго 0.03% 950гх8ПЭТ",
                                     "level4": "МАЖИТЭЛЬ ДЖЕЙ7",
                                     "level5": "АНАНАС, МАНГО",
                                     "level6": "ПЭТ",
@@ -3871,7 +3952,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 485,
-                                    "name2": "Нап сывор Мажитель J7 Арбуз Дыня 0.03% 270г х8 ПЭТ",
+                                    type: "product", "name": "Нап сывор Мажитель J7 Арбуз Дыня 0.03% 270г х8 ПЭТ",
                                     "level4": "МАЖИТЭЛЬ ДЖЕЙ7",
                                     "level5": "ДЫНЯ, АРБУЗ",
                                     "level6": "ПЭТ",
@@ -3879,7 +3960,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 486,
-                                    "name2": "Нап сывор Мажитель J7 Арбуз Дыня 0.03% 950г х8 ПЭТ",
+                                    type: "product", "name": "Нап сывор Мажитель J7 Арбуз Дыня 0.03% 950г х8 ПЭТ",
                                     "level4": "МАЖИТЭЛЬ ДЖЕЙ7",
                                     "level5": "ДЫНЯ, АРБУЗ",
                                     "level6": "ПЭТ",
@@ -3892,16 +3973,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 487,
                     "name": "Йогурты",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 488,
                             "name": "Йогурт Вязкий Живой",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 489,
-                                    "name2": "Биойг с нап БиоМакс ОтрубиЗлаки 2.6% 125г х24 Четв",
+                                    type: "product", "name": "Биойг с нап БиоМакс ОтрубиЗлаки 2.6% 125г х24 Четв",
                                     "level4": "БИО-МАХ",
                                     "level5": "ОТРУБИ-ЗЛАКИ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -3909,7 +3990,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 490,
-                                    "name2": "Биойогурт Классич БиоМакс 3.2% 125г х24 Четв",
+                                    type: "product", "name": "Биойогурт Классич БиоМакс 3.2% 125г х24 Четв",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -3917,7 +3998,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 491,
-                                    "name2": "Биойогурт фрук БиоМакс Клубника 2.6% 125г х24 Четв",
+                                    type: "product", "name": "Биойогурт фрук БиоМакс Клубника 2.6% 125г х24 Четв",
                                     "level4": "БИО-МАХ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -3925,7 +4006,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 492,
-                                    "name2": "Биойогурт Фрукт БиоМакс Персик 2.5% 125г х24 Четв",
+                                    type: "product", "name": "Биойогурт Фрукт БиоМакс Персик 2.5% 125г х24 Четв",
                                     "level4": "БИО-МАХ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -3933,7 +4014,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 493,
-                                    "name2": "Биойогурт Фрукт БиоМакс Черн 2.5% 125г х24 Четв",
+                                    type: "product", "name": "Биойогурт Фрукт БиоМакс Черн 2.5% 125г х24 Четв",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -3941,7 +4022,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 494,
-                                    "name2": "Биойогурт БиоМакс Отруби Злак 2.5% 115г х12 Ван",
+                                    type: "product", "name": "Биойогурт БиоМакс Отруби Злак 2.5% 115г х12 Ван",
                                     "level4": "БИО-МАХ",
                                     "level5": "ОТРУБИ-ЗЛАКИ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -3949,7 +4030,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 495,
-                                    "name2": "Биойогурт БиоМакс Отруби Злак 2.5%150г х12Ван",
+                                    type: "product", "name": "Биойогурт БиоМакс Отруби Злак 2.5%150г х12Ван",
                                     "level4": "БИО-МАХ",
                                     "level5": "ОТРУБИ-ЗЛАКИ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -3957,7 +4038,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 496,
-                                    "name2": "Биойогурт Натур БиоМакс 3.1% 115г х12 Ван",
+                                    type: "product", "name": "Биойогурт Натур БиоМакс 3.1% 115г х12 Ван",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -3965,7 +4046,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 497,
-                                    "name2": "Биойогурт Натур БиоМакс 3.1% 115г х12 Ван +10%",
+                                    type: "product", "name": "Биойогурт Натур БиоМакс 3.1% 115г х12 Ван +10%",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -3973,7 +4054,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 498,
-                                    "name2": "Биойогурт фрук BioMax Лесн ягоды 2.6% 290г x8 МСТ",
+                                    type: "product", "name": "Биойогурт фрук BioMax Лесн ягоды 2.6% 290г x8 МСТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -3981,7 +4062,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 499,
-                                    "name2": "Биойогурт фрукт BioMax Вишня 2.6% 290г х8 МСТ",
+                                    type: "product", "name": "Биойогурт фрукт BioMax Вишня 2.6% 290г х8 МСТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "ВИШНЯ",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -3989,7 +4070,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 500,
-                                    "name2": "Биойогурт Фрукт БиоМакс Клуб 2.5% 115г х12 Ван",
+                                    type: "product", "name": "Биойогурт Фрукт БиоМакс Клуб 2.5% 115г х12 Ван",
                                     "level4": "БИО-МАХ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -3997,7 +4078,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 501,
-                                    "name2": "Биойогурт Фрукт БиоМакс Клуб 2.5% 115г х12Ван +10%",
+                                    type: "product", "name": "Биойогурт Фрукт БиоМакс Клуб 2.5% 115г х12Ван +10%",
                                     "level4": "БИО-МАХ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4005,7 +4086,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 502,
-                                    "name2": "Биойогурт Фрукт БиоМакс Клуб 2.5% 150г х12 Ван",
+                                    type: "product", "name": "Биойогурт Фрукт БиоМакс Клуб 2.5% 150г х12 Ван",
                                     "level4": "БИО-МАХ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4013,7 +4094,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 503,
-                                    "name2": "Йог вяз Чудо Завтрак пер/мюс 2.5% 1х12х180г мст",
+                                    type: "product", "name": "Йог вяз Чудо Завтрак пер/мюс 2.5% 1х12х180г мст",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4021,7 +4102,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 504,
-                                    "name2": "Йогурт вязкий Фругурт Клубника 2.5% 1х16х250г ванн",
+                                    type: "product", "name": "Йогурт вязкий Фругурт Клубника 2.5% 1х16х250г ванн",
                                     "level4": "ФРУГУРТ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4029,7 +4110,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 505,
-                                    "name2": "Йогурт Класич Чудо 3.5% 125г х12 Ван",
+                                    type: "product", "name": "Йогурт Класич Чудо 3.5% 125г х12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4037,7 +4118,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 506,
-                                    "name2": "Йогурт с фр на дне Чудо Садов фр 2.5% 125г х12 ван",
+                                    type: "product", "name": "Йогурт с фр на дне Чудо Садов фр 2.5% 125г х12 ван",
                                     "level4": "ЧУДО",
                                     "level5": "ГРУША, ЯБЛОКО, СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4045,7 +4126,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 507,
-                                    "name2": "Йогурт Фрукт Чудо Ананас 2.5% 125г х12 Ван",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Ананас 2.5% 125г х12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4053,7 +4134,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 508,
-                                    "name2": "Йогурт Фрукт Чудо Виш 2.5% 125г х12 Ван",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Виш 2.5% 125г х12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4061,7 +4142,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 509,
-                                    "name2": "Йогурт Фрукт Чудо Виш Череш 2.5% 315г х8 МСТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Виш Череш 2.5% 315г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4069,7 +4150,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 510,
-                                    "name2": "Йогурт Фрукт Чудо Клуб 2.5% 125г х12 Ван",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб 2.5% 125г х12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4077,7 +4158,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 511,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Земл 2.5% 125г х24 Четв",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Земл 2.5% 125г х24 Четв",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4085,7 +4166,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 512,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Земл 2.5% 315г х8 МСТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Земл 2.5% 315г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4093,7 +4174,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 513,
-                                    "name2": "Йогурт Фрукт Чудо Перс Марк 2.5% 125г х24 Четв",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Перс Марк 2.5% 125г х24 Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАРАКУЙЯ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4101,7 +4182,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 514,
-                                    "name2": "Йогурт Фрукт Чудо Перс Марк 2.5% 315г х8 МСТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Перс Марк 2.5% 315г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАРАКУЙЯ",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4109,7 +4190,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 515,
-                                    "name2": "Йогурт Фрукт Чудо Черника Мал 2.5% 125г х24 Четв",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Черника Мал 2.5% 125г х24 Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4117,7 +4198,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 516,
-                                    "name2": "Йогурт Фрукт Чудо Черника Мал 2.5% 315г х8 МСТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Черника Мал 2.5% 315г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4125,7 +4206,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 517,
-                                    "name2": "Йогур с фр на дне Чудо Северн яг 2.5% 125г х12 ван",
+                                    type: "product", "name": "Йогур с фр на дне Чудо Северн яг 2.5% 125г х12 ван",
                                     "level4": "ЧУДО",
                                     "level5": "БРУСНИКА, КЛЮКВА, МОРОШКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4133,7 +4214,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 518,
-                                    "name2": "Йогурт BioMax classic 3.2% 125г х24 четв ул.пищ",
+                                    type: "product", "name": "Йогурт BioMax classic 3.2% 125г х24 четв ул.пищ",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4141,7 +4222,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 519,
-                                    "name2": "Йогурт с фр на дне Чудо ВишЧереш 2.5% 125г ван 12Х",
+                                    type: "product", "name": "Йогурт с фр на дне Чудо ВишЧереш 2.5% 125г ван 12Х",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4149,7 +4230,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 520,
-                                    "name2": "Йогурт Фрукт БТМ Вишня 2.5% 250г х16 Ван",
+                                    type: "product", "name": "Йогурт Фрукт БТМ Вишня 2.5% 250г х16 Ван",
                                     "level4": "NON BRANDED",
                                     "level5": "ВИШНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4157,7 +4238,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 521,
-                                    "name2": "Йогурт Фрукт БТМ Клуб 2.5% 250г х16 Ван",
+                                    type: "product", "name": "Йогурт Фрукт БТМ Клуб 2.5% 250г х16 Ван",
                                     "level4": "NON BRANDED",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4165,7 +4246,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 522,
-                                    "name2": "Йогурт Фрукт БТМ Персик Марк 2.5% 250г х16 Ван",
+                                    type: "product", "name": "Йогурт Фрукт БТМ Персик Марк 2.5% 250г х16 Ван",
                                     "level4": "NON BRANDED",
                                     "level5": "ПЕРСИК, МАРАКУЙЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4173,7 +4254,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 523,
-                                    "name2": "Йогурт Фрукт БТМ Персик Марк 2.5% 250г х16 Ван",
+                                    type: "product", "name": "Йогурт Фрукт БТМ Персик Марк 2.5% 250г х16 Ван",
                                     "level4": "NON BRANDED",
                                     "level5": "ПЕРСИК, МАРАКУЙЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4181,7 +4262,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 524,
-                                    "name2": "Йогурт Фрукт БТМ Черника 2.5% 250г х16 Ван",
+                                    type: "product", "name": "Йогурт Фрукт БТМ Черника 2.5% 250г х16 Ван",
                                     "level4": "NON BRANDED",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4189,7 +4270,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 525,
-                                    "name2": "Йогурт Фрукт БТМ Черника 2.5% 250г х16 Ван",
+                                    type: "product", "name": "Йогурт Фрукт БТМ Черника 2.5% 250г х16 Ван",
                                     "level4": "NON BRANDED",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4197,7 +4278,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 526,
-                                    "name2": "Йогурт Фрукт на дне Чудо Клуб 2.5% 160г х12 МВан",
+                                    type: "product", "name": "Йогурт Фрукт на дне Чудо Клуб 2.5% 160г х12 МВан",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4205,7 +4286,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 527,
-                                    "name2": "Йогурт Фрукт на дне Чудо Перс Манг2,5%160гх12 МВан",
+                                    type: "product", "name": "Йогурт Фрукт на дне Чудо Перс Манг2,5%160гх12 МВан",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАНГО",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4213,7 +4294,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 528,
-                                    "name2": "Йогурт Фрукт Чудо Виш Черешня 2.5% 290г х8 МСТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Виш Черешня 2.5% 290г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4221,7 +4302,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 529,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Джем 2.5% 125г х12 МВан",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Джем 2.5% 125г х12 МВан",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4229,7 +4310,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 530,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Земл 2.5% 290г х8 МСТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Земл 2.5% 290г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4237,7 +4318,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 531,
-                                    "name2": "Йогурт Фрукт Чудо Перс Манго Дж 2.5% 125г х12 МВан",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Перс Манго Дж 2.5% 125г х12 МВан",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАНГО",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4245,7 +4326,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 532,
-                                    "name2": "Йогурт Фрукт Чудо Перс Марк 2.5% 290г х8 МСТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Перс Марк 2.5% 290г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАРАКУЙЯ",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4253,7 +4334,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 533,
-                                    "name2": "Йогурт Фрукт Чудо Черника Мал 2.5% 290г х8 МСТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Черника Мал 2.5% 290г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4261,7 +4342,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 534,
-                                    "name2": "Йогурт Чудо Ассорти 2.5% 290г х8 мст",
+                                    type: "product", "name": "Йогурт Чудо Ассорти 2.5% 290г х8 мст",
                                     "level4": "ЧУДО",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -4269,7 +4350,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 535,
-                                    "name2": "Йогурт Чудо Гавайсикй Микс 2.5% 290г МСТ СГ38 8Х",
+                                    type: "product", "name": "Йогурт Чудо Гавайсикй Микс 2.5% 290г МСТ СГ38 8Х",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС, МАНГО, ЧИА",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4277,7 +4358,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 536,
-                                    "name2": "Йогурт Чудо Гавайский Микс 2.5% 290г МСТ 8Х",
+                                    type: "product", "name": "Йогурт Чудо Гавайский Микс 2.5% 290г МСТ 8Х",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС, МАНГО, ЧИА",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4285,7 +4366,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 537,
-                                    "name2": "Йогурт ЧудоДет Пломбир с печеньем 2.7% 90г МСТ 6Х",
+                                    type: "product", "name": "Йогурт ЧудоДет Пломбир с печеньем 2.7% 90г МСТ 6Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ПЛОМБИР И ПЕЧЕНЬЕ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4293,7 +4374,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 538,
-                                    "name2": "Йогурт ЧудоДетки КлубнБананПеченье 2.7% 90г МСТ 6Х",
+                                    type: "product", "name": "Йогурт ЧудоДетки КлубнБананПеченье 2.7% 90г МСТ 6Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА, БАНАН, ПЕЧЕНЬЕ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -4301,7 +4382,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 539,
-                                    "name2": "ЙогурТермост ДвД Вишня 3% 150г МСТ 6Х",
+                                    type: "product", "name": "ЙогурТермост ДвД Вишня 3% 150г МСТ 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "ВИШНЯ",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4309,7 +4390,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 540,
-                                    "name2": "ЙогурТермост ДвД Клубника 3% 150г МСТ 6Х",
+                                    type: "product", "name": "ЙогурТермост ДвД Клубника 3% 150г МСТ 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4317,7 +4398,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 541,
-                                    "name2": "ЙогурТермост ДвД Натур 3.7% 150г МСТ 6Х",
+                                    type: "product", "name": "ЙогурТермост ДвД Натур 3.7% 150г МСТ 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4325,7 +4406,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 542,
-                                    "name2": "ЙогурТермост ДвД Черника 3% 150г МСТ 6Х",
+                                    type: "product", "name": "ЙогурТермост ДвД Черника 3% 150г МСТ 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4333,7 +4414,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 543,
-                                    "name2": "ЙогурТермост ДвД Яблоко 3% 150г МСТ 6Х",
+                                    type: "product", "name": "ЙогурТермост ДвД Яблоко 3% 150г МСТ 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "ЯБЛОКО",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4341,7 +4422,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 544,
-                                    "name2": "ЙогФрук Чудо ГолубБруснКняженик 2.5% 290г МСТ 8Х",
+                                    type: "product", "name": "ЙогФрук Чудо ГолубБруснКняженик 2.5% 290г МСТ 8Х",
                                     "level4": "ЧУДО",
                                     "level5": "ГОЛУБИКА, БРУСНИКА, КНЯЖЕНИКА",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4352,11 +4433,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 545,
                             "name": "Йогурт Вязкий Термизированный",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 546,
-                                    "name2": "Йогуртер Чудо виш-череш 5.1% 1х24х115г Четв",
+                                    type: "product", "name": "Йогуртер Чудо виш-череш 5.1% 1х24х115г Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4364,7 +4445,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 547,
-                                    "name2": "Йогуртер Чудо лесные яг 5.1% 1х24х115г Четв",
+                                    type: "product", "name": "Йогуртер Чудо лесные яг 5.1% 1х24х115г Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4372,7 +4453,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 548,
-                                    "name2": "Прод Йогуртн пастер Чудо Клуб Земл 5.1%115гх24Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Чудо Клуб Земл 5.1%115гх24Четв",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4380,7 +4461,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 549,
-                                    "name2": "Прод Йогуртн пастер Чудо Перс Марк 5.1%115гх24Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Чудо Перс Марк 5.1%115гх24Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАРАКУЙЯ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4388,7 +4469,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 550,
-                                    "name2": "Прод Йогуртн пастер Фругурт Клуб 2.5%100г х24 Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Фругурт Клуб 2.5%100г х24 Четв",
                                     "level4": "ФРУГУРТ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4396,7 +4477,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 551,
-                                    "name2": "Прод Йогуртн пастер Фругурт Перс 2.5%100г х24 Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Фругурт Перс 2.5%100г х24 Четв",
                                     "level4": "ФРУГУРТ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4404,7 +4485,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 552,
-                                    "name2": "Прод Йогуртн пастер Фругурт Черн 2.5% 100г х24Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Фругурт Черн 2.5% 100г х24Четв",
                                     "level4": "ФРУГУРТ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4412,7 +4493,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 553,
-                                    "name2": "Прод Йогуртн пастер Фругурт Черн 2.5%100г х24 Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Фругурт Черн 2.5%100г х24 Четв",
                                     "level4": "ФРУГУРТ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4420,7 +4501,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 554,
-                                    "name2": "Прод Йогуртн пастер Чудо Клуб Земл 2.5%115гх24Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Чудо Клуб Земл 2.5%115гх24Четв",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4428,7 +4509,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 555,
-                                    "name2": "Прод Йогуртн пастер Чудо Клуб Земл 5.1%115гх24Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Чудо Клуб Земл 5.1%115гх24Четв",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4436,7 +4517,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 556,
-                                    "name2": "Прод Йогуртн пастер Чудо Перс Манг 2.5%115гх24Четв",
+                                    type: "product", "name": "Прод Йогуртн пастер Чудо Перс Манг 2.5%115гх24Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАНГО",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4444,7 +4525,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 557,
-                                    "name2": "Прод Йогуртн Чудо Перс Марк 5.1% 115г х24 Четв",
+                                    type: "product", "name": "Прод Йогуртн Чудо Перс Марк 5.1% 115г х24 Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАРАКУЙЯ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -4457,16 +4538,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 558,
                     "name": "Йогурты Питьевые",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 559,
                             "name": "Йогурт Питьевой",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 560,
-                                    "name2": "Биойог пит кус фр Кунгурс Черника1.5%400г экол 20Х",
+                                    type: "product", "name": "Биойог пит кус фр Кунгурс Черника1.5%400г экол 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "КУВШИН ПАУЧ-ПАК",
@@ -4474,7 +4555,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 561,
-                                    "name2": "Биойог пит с кус фр Кунгу Клубн 1.5% 400г экол 20Х",
+                                    type: "product", "name": "Биойог пит с кус фр Кунгу Клубн 1.5% 400г экол 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "КУВШИН ПАУЧ-ПАК",
@@ -4482,7 +4563,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 562,
-                                    "name2": "Биойог пит с кус фр Кунгур ЛеснЯг1.5% 400г экол20Х",
+                                    type: "product", "name": "Биойог пит с кус фр Кунгур ЛеснЯг1.5% 400г экол20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ЛЕСНЫЕ ЯГОДЫ",
                                     "level6": "КУВШИН ПАУЧ-ПАК",
@@ -4490,7 +4571,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 563,
-                                    "name2": "Биойог пит с кус фр Кунгур Перс 1.5% 400г экол 20Х",
+                                    type: "product", "name": "Биойог пит с кус фр Кунгур Перс 1.5% 400г экол 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ПЕРСИК",
                                     "level6": "КУВШИН ПАУЧ-ПАК",
@@ -4498,7 +4579,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 564,
-                                    "name2": "Биойогурт BioMax Мюсли-5 злак 2.8% 270г х15 БП",
+                                    type: "product", "name": "Биойогурт BioMax Мюсли-5 злак 2.8% 270г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "МЮСЛИ-ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -4506,7 +4587,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 565,
-                                    "name2": "Биойогурт BioMax Мюсли-5 злак 2.8% 270г х6 БП",
+                                    type: "product", "name": "Биойогурт BioMax Мюсли-5 злак 2.8% 270г х6 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "МЮСЛИ-ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -4514,7 +4595,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 566,
-                                    "name2": "Биойогурт BioMax Мюсли-5злак 2.8% 270г БП ГУ6 6Х",
+                                    type: "product", "name": "Биойогурт BioMax Мюсли-5злак 2.8% 270г БП ГУ6 6Х",
                                     "level4": "БИО-МАХ",
                                     "level5": "МЮСЛИ-ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -4522,7 +4603,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 567,
-                                    "name2": "Биойогурт BioMax натур 3.1% 270г БП ГУ6",
+                                    type: "product", "name": "Биойогурт BioMax натур 3.1% 270г БП ГУ6",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -4530,7 +4611,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 568,
-                                    "name2": "Биойогурт BioMax натур 3.1% 270г х15 ПЭТ",
+                                    type: "product", "name": "Биойогурт BioMax натур 3.1% 270г х15 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -4538,7 +4619,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 569,
-                                    "name2": "Биойогурт BioMax натур 3.1% 270г х6 ПЭТ",
+                                    type: "product", "name": "Биойогурт BioMax натур 3.1% 270г х6 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -4546,7 +4627,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 570,
-                                    "name2": "Биойогурт Кунгурский 2.5% 450г ФП",
+                                    type: "product", "name": "Биойогурт Кунгурский 2.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -4554,7 +4635,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 571,
-                                    "name2": "Биойогурт фр BioMax ПерсикКурага 2.7% 270г х15 ПЭТ",
+                                    type: "product", "name": "Биойогурт фр BioMax ПерсикКурага 2.7% 270г х15 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "ПЕРСИК-КУРАГА",
                                     "level6": "ПЭТ",
@@ -4562,7 +4643,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 572,
-                                    "name2": "Биойогурт фр BioMax ПерсикКурага 2.7% 270г х6 ПЭТ",
+                                    type: "product", "name": "Биойогурт фр BioMax ПерсикКурага 2.7% 270г х6 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "ПЕРСИК-КУРАГА",
                                     "level6": "ПЭТ",
@@ -4570,7 +4651,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 573,
-                                    "name2": "Биойогурт фр BioMax Чернослив 2.7% 270г БП ГУ6 6Х",
+                                    type: "product", "name": "Биойогурт фр BioMax Чернослив 2.7% 270г БП ГУ6 6Х",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЧЕРНОСЛИВ",
                                     "level6": "ПЭТ",
@@ -4578,7 +4659,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 574,
-                                    "name2": "Биойогурт фрук BioMax Клубника 2.7% 270г БП ГУ6 6Х",
+                                    type: "product", "name": "Биойогурт фрук BioMax Клубника 2.7% 270г БП ГУ6 6Х",
                                     "level4": "БИО-МАХ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -4586,7 +4667,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 575,
-                                    "name2": "Биойогурт фрук BioMax Клубника 2.7% 270г х15 БП",
+                                    type: "product", "name": "Биойогурт фрук BioMax Клубника 2.7% 270г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -4594,7 +4675,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 576,
-                                    "name2": "Биойогурт фрук BioMax Клубника 2.7% 270г х6 БП",
+                                    type: "product", "name": "Биойогурт фрук BioMax Клубника 2.7% 270г х6 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -4602,7 +4683,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 577,
-                                    "name2": "Биойогурт фрук BioMax Чернослив 2.7% 270г х15 БП",
+                                    type: "product", "name": "Биойогурт фрук BioMax Чернослив 2.7% 270г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЧЕРНОСЛИВ",
                                     "level6": "ПЭТ",
@@ -4610,7 +4691,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 578,
-                                    "name2": "Биойогурт фрук BioMax Чернослив 2.7% 270г х6 БП",
+                                    type: "product", "name": "Биойогурт фрук BioMax Чернослив 2.7% 270г х6 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЧЕРНОСЛИВ",
                                     "level6": "ПЭТ",
@@ -4618,7 +4699,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 579,
-                                    "name2": "Биойогурт фрук BioMax Яблоко-Злаки 2.7% 270г х6 БП",
+                                    type: "product", "name": "Биойогурт фрук BioMax Яблоко-Злаки 2.7% 270г х6 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЯБЛОКО-ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -4626,7 +4707,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 580,
-                                    "name2": "Биойогурт фрук BioMax ЯблокоЗлаки 2.7% 270г х15 БП",
+                                    type: "product", "name": "Биойогурт фрук BioMax ЯблокоЗлаки 2.7% 270г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЯБЛОКО-ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -4634,7 +4715,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 581,
-                                    "name2": "Биойогурт Фрукт БиоМакс Мал ЧСмор 2.7% 290г х6 БП",
+                                    type: "product", "name": "Биойогурт Фрукт БиоМакс Мал ЧСмор 2.7% 290г х6 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "МАЛИНА-СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "ПЭТ",
@@ -4642,7 +4723,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 582,
-                                    "name2": "БиойогуртФр BioMax ПерсКурага 2.7% 270г БП ГУ6 6Х",
+                                    type: "product", "name": "БиойогуртФр BioMax ПерсКурага 2.7% 270г БП ГУ6 6Х",
                                     "level4": "БИО-МАХ",
                                     "level5": "ПЕРСИК-КУРАГА",
                                     "level6": "ПЭТ",
@@ -4650,7 +4731,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 583,
-                                    "name2": "БиойогуртФр BioMax ЯблокоЗлаки 2.7% 270г БП ГУ6 6Х",
+                                    type: "product", "name": "БиойогуртФр BioMax ЯблокоЗлаки 2.7% 270г БП ГУ6 6Х",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЯБЛОКО-ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -4658,7 +4739,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 584,
-                                    "name2": "БиойогФр с кус фр Кунгурс Черника 1.5% 190г МСТ",
+                                    type: "product", "name": "БиойогФр с кус фр Кунгурс Черника 1.5% 190г МСТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4666,7 +4747,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 585,
-                                    "name2": "БиойогФр с кус фрук Кунгу Клубн 1.5% 190г МСТ 35Х",
+                                    type: "product", "name": "БиойогФр с кус фрук Кунгу Клубн 1.5% 190г МСТ 35Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4674,7 +4755,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 586,
-                                    "name2": "БиойогФр с кус фрук Кунгур ЛеснЯг 1.5% 190г МСТ",
+                                    type: "product", "name": "БиойогФр с кус фрук Кунгур ЛеснЯг 1.5% 190г МСТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ЛЕСНЫЕ ЯГОДЫ",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4682,7 +4763,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 587,
-                                    "name2": "БиойогФр с кус фрук Кунгур Перс 1.5% 190г МСТ 35Х",
+                                    type: "product", "name": "БиойогФр с кус фрук Кунгур Перс 1.5% 190г МСТ 35Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ПЕРСИК",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -4690,7 +4771,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 588,
-                                    "name2": "Биойогурт с бифбак БиоМакс Клуб 2.7% 300г х15 БП",
+                                    type: "product", "name": "Биойогурт с бифбак БиоМакс Клуб 2.7% 300г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -4698,7 +4779,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 589,
-                                    "name2": "Биойогурт с бифбак БиоМакс Мюс 5злак 2.9%300гх6 БП",
+                                    type: "product", "name": "Биойогурт с бифбак БиоМакс Мюс 5злак 2.9%300гх6 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "МЮСЛИ-ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -4706,7 +4787,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 590,
-                                    "name2": "Биойогурт с бифбак БиоМакс Натур 3.1% 300г х15 БП",
+                                    type: "product", "name": "Биойогурт с бифбак БиоМакс Натур 3.1% 300г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -4714,7 +4795,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 591,
-                                    "name2": "Биойогурт с бифбак БиоМакс Перс Кур 2.7% 300гх15БП",
+                                    type: "product", "name": "Биойогурт с бифбак БиоМакс Перс Кур 2.7% 300гх15БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "ПЕРСИК-КУРАГА",
                                     "level6": "ПЭТ",
@@ -4722,7 +4803,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 592,
-                                    "name2": "Биойогурт с бифбак БиоМакс Перс Кур 2.7% 300гх6 БП",
+                                    type: "product", "name": "Биойогурт с бифбак БиоМакс Перс Кур 2.7% 300гх6 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "ПЕРСИК-КУРАГА",
                                     "level6": "ПЭТ",
@@ -4730,7 +4811,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 593,
-                                    "name2": "Биойогурт с бифбак БиоМакс Чернсл 2.7% 300г х15 БП",
+                                    type: "product", "name": "Биойогурт с бифбак БиоМакс Чернсл 2.7% 300г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЧЕРНОСЛИВ",
                                     "level6": "ПЭТ",
@@ -4738,7 +4819,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 594,
-                                    "name2": "Биойогурт с бифбак БиоМакс Ябл Злак 2.7% 300гх15БП",
+                                    type: "product", "name": "Биойогурт с бифбак БиоМакс Ябл Злак 2.7% 300гх15БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "ЯБЛОКО-ЗЛАКИ",
                                     "level6": "ПЭТ",
@@ -4746,7 +4827,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 595,
-                                    "name2": "Биойогурт фр BioMax Мал-Смор.черн 2.7% 270г х15 БП",
+                                    type: "product", "name": "Биойогурт фр BioMax Мал-Смор.черн 2.7% 270г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "МАЛИНА-СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "ПЭТ",
@@ -4754,7 +4835,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 596,
-                                    "name2": "Биойогурт фр BioMax Мал-Смор.черн 2.7% 270г х6 ПЭТ",
+                                    type: "product", "name": "Биойогурт фр BioMax Мал-Смор.черн 2.7% 270г х6 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "МАЛИНА-СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "ПЭТ",
@@ -4762,7 +4843,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 597,
-                                    "name2": "Биойогурт Фрукт БиоМакс Мал ЧСмор 2.7% 290г х15 БП",
+                                    type: "product", "name": "Биойогурт Фрукт БиоМакс Мал ЧСмор 2.7% 290г х15 БП",
                                     "level4": "БИО-МАХ",
                                     "level5": "МАЛИНА-СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "ПЭТ",
@@ -4770,7 +4851,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 598,
-                                    "name2": "Йог фр Чудо Северные ягоды 2.4% 290г x15 БП",
+                                    type: "product", "name": "Йог фр Чудо Северные ягоды 2.4% 290г x15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "БРУСНИКА, ГОЛУБИКА, МОРОШКА",
                                     "level6": "ПЭТ",
@@ -4778,7 +4859,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 599,
-                                    "name2": "Йог фр Чудо Северные ягоды 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йог фр Чудо Северные ягоды 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "БРУСНИКА, ГОЛУБИКА, МОРОШКА",
                                     "level6": "ПЭТ",
@@ -4786,7 +4867,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 600,
-                                    "name2": "Йогурт фр Чудо Груш-Ябл-ЧерСмород 2.4% 270г х15 БП",
+                                    type: "product", "name": "Йогурт фр Чудо Груш-Ябл-ЧерСмород 2.4% 270г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ГРУША, ЯБЛОКО, СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "ПЭТ",
@@ -4794,7 +4875,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 601,
-                                    "name2": "Йогурт фр Чудо Груш-Ябл-ЧерСмород 2.4% 270г х6 БП",
+                                    type: "product", "name": "Йогурт фр Чудо Груш-Ябл-ЧерСмород 2.4% 270г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ГРУША, ЯБЛОКО, СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "ПЭТ",
@@ -4802,7 +4883,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 602,
-                                    "name2": "Йогурт фр Чудо Клубн-Землян 2.4% 270г х6 БП Танд",
+                                    type: "product", "name": "Йогурт фр Чудо Клубн-Землян 2.4% 270г х6 БП Танд",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -4810,7 +4891,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 603,
-                                    "name2": "Йогурт фр Чудо Персик-Абрик 2.4% 270г х6 БП Танд",
+                                    type: "product", "name": "Йогурт фр Чудо Персик-Абрик 2.4% 270г х6 БП Танд",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-АБРИКОС",
                                     "level6": "ПЭТ",
@@ -4818,7 +4899,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 604,
-                                    "name2": "Йогурт фр Чудо ПерсМангоДыня 2.4% 270г х6 БП Танд",
+                                    type: "product", "name": "Йогурт фр Чудо ПерсМангоДыня 2.4% 270г х6 БП Танд",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК, МАНГО, ДЫНЯ",
                                     "level6": "ПЭТ",
@@ -4826,7 +4907,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 605,
-                                    "name2": "Йогурт фр Чудо Черника-Мал 2.4% 270г х6 БутПл Танд",
+                                    type: "product", "name": "Йогурт фр Чудо Черника-Мал 2.4% 270г х6 БутПл Танд",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "ПЭТ",
@@ -4834,7 +4915,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 606,
-                                    "name2": "Йогурт фр Чудо Черника-малина 2.4% 690г БП 8Х",
+                                    type: "product", "name": "Йогурт фр Чудо Черника-малина 2.4% 690г БП 8Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "ПЭТ",
@@ -4842,7 +4923,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 607,
-                                    "name2": "Йогурт Фругурт Клуб 2.5% 475г х10 ППак",
+                                    type: "product", "name": "Йогурт Фругурт Клуб 2.5% 475г х10 ППак",
                                     "level4": "ФРУГУРТ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА РЕКС",
@@ -4850,7 +4931,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 608,
-                                    "name2": "Йогурт Фругурт Персик 2.5% 475г х10 ППак",
+                                    type: "product", "name": "Йогурт Фругурт Персик 2.5% 475г х10 ППак",
                                     "level4": "ФРУГУРТ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ТЕТРА РЕКС",
@@ -4858,7 +4939,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 609,
-                                    "name2": "Йогурт Фрукт Чудо Анан Банан 2.4% 290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Анан Банан 2.4% 290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС-БАНАН",
                                     "level6": "ПЭТ",
@@ -4866,7 +4947,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 610,
-                                    "name2": "Йогурт Фрукт Чудо Анан Банан 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Анан Банан 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС-БАНАН",
                                     "level6": "ПЭТ",
@@ -4874,7 +4955,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 611,
-                                    "name2": "Йогурт Фрукт Чудо Виш Череш 2.4% 290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Виш Череш 2.4% 290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ПЭТ",
@@ -4882,7 +4963,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 612,
-                                    "name2": "Йогурт Фрукт Чудо Виш Череш 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Виш Череш 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ПЭТ",
@@ -4890,7 +4971,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 613,
-                                    "name2": "Йогурт Фрукт Чудо Виш Череш 2.4% 290г х6 ПЭТ ТА",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Виш Череш 2.4% 290г х6 ПЭТ ТА",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ПЭТ",
@@ -4898,7 +4979,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 614,
-                                    "name2": "Йогурт фрукт Чудо Вишня-Череш 2.4% 270г х6 БП Танд",
+                                    type: "product", "name": "Йогурт фрукт Чудо Вишня-Череш 2.4% 270г х6 БП Танд",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ПЭТ",
@@ -4906,7 +4987,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 615,
-                                    "name2": "Йогурт Фрукт Чудо Груш Чсмор Ябл 2.4% 290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Груш Чсмор Ябл 2.4% 290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ГРУША, ЯБЛОКО, СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "ПЭТ",
@@ -4914,7 +4995,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 616,
-                                    "name2": "Йогурт Фрукт Чудо Груш Чсмор Ябл 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Груш Чсмор Ябл 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ГРУША, ЯБЛОКО, СМОРОДИНА ЧЕРНАЯ",
                                     "level6": "ПЭТ",
@@ -4922,7 +5003,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 617,
-                                    "name2": "Йогурт Фрукт Чудо Кив Марк Ап 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Кив Марк Ап 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КИВИ, АПЕЛЬСИН, МАРАКУЙЯ",
                                     "level6": "ПЭТ",
@@ -4930,7 +5011,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 618,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Земл 2.4% 290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Земл 2.4% 290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -4938,7 +5019,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 619,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Земл 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Земл 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -4946,7 +5027,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 620,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Земл 2.4% 290г х6 ПЭТ ТА",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Земл 2.4% 290г х6 ПЭТ ТА",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -4954,7 +5035,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 621,
-                                    "name2": "Йогурт Фрукт Чудо Перс Манго Дын 2.4% 290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Перс Манго Дын 2.4% 290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК, МАНГО, ДЫНЯ",
                                     "level6": "ПЭТ",
@@ -4962,7 +5043,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 622,
-                                    "name2": "Йогурт Фрукт Чудо Перс Манго Дын 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Перс Манго Дын 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК, МАНГО, ДЫНЯ",
                                     "level6": "ПЭТ",
@@ -4970,7 +5051,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 623,
-                                    "name2": "Йогурт Фрукт Чудо Перс Манго Дын 2.4% 290гх6ПЭТ ТА",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Перс Манго Дын 2.4% 290гх6ПЭТ ТА",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК, МАНГО, ДЫНЯ",
                                     "level6": "ПЭТ",
@@ -4978,7 +5059,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 624,
-                                    "name2": "Йогурт Фрукт Чудо Перс Манго Дын 2.4%290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Перс Манго Дын 2.4%290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК, МАНГО, ДЫНЯ",
                                     "level6": "ПЭТ",
@@ -4986,7 +5067,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 625,
-                                    "name2": "Йогурт Фрукт Чудо Персик Абр 2.4% 290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Персик Абр 2.4% 290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-АБРИКОС",
                                     "level6": "ПЭТ",
@@ -4994,7 +5075,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 626,
-                                    "name2": "Йогурт Фрукт Чудо Персик Абр 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Персик Абр 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-АБРИКОС",
                                     "level6": "ПЭТ",
@@ -5002,7 +5083,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 627,
-                                    "name2": "Йогурт Фрукт Чудо Персик Абр 2.4% 290г х6 ПЭТ ТА",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Персик Абр 2.4% 290г х6 ПЭТ ТА",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-АБРИКОС",
                                     "level6": "ПЭТ",
@@ -5010,7 +5091,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 628,
-                                    "name2": "Йогурт Фрукт Чудо Троп Микс 2.4% 290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Троп Микс 2.4% 290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КИВИ, АПЕЛЬСИН, МАРАКУЙЯ",
                                     "level6": "ПЭТ",
@@ -5018,7 +5099,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 629,
-                                    "name2": "Йогурт Фрукт Чудо Черника Мал 2.4% 290г х15 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Черника Мал 2.4% 290г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "ПЭТ",
@@ -5026,7 +5107,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 630,
-                                    "name2": "Йогурт Фрукт Чудо Черника Мал 2.4% 290г х6 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Черника Мал 2.4% 290г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "ПЭТ",
@@ -5034,7 +5115,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 631,
-                                    "name2": "Йогурт Фрукт Чудо Черника Мал 2.4% 290г х6 ПЭТ ТА",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Черника Мал 2.4% 290г х6 ПЭТ ТА",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "ПЭТ",
@@ -5042,7 +5123,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 632,
-                                    "name2": "Йогурт Чудо Коллекция Кокос Шейк 3% 270г х15 БП",
+                                    type: "product", "name": "Йогурт Чудо Коллекция Кокос Шейк 3% 270г х15 БП",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "КОКОСОВЫЙ",
                                     "level6": "ПЭТ",
@@ -5050,7 +5131,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 633,
-                                    "name2": "Йогурт Чудо Коллекция Кокос Шейк 3% 270г х6 БП",
+                                    type: "product", "name": "Йогурт Чудо Коллекция Кокос Шейк 3% 270г х6 БП",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "КОКОСОВЫЙ",
                                     "level6": "ПЭТ",
@@ -5058,7 +5139,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 634,
-                                    "name2": "Йогурт Чудо Коллекция Малин Фрап 2.5% 270г х15 БП",
+                                    type: "product", "name": "Йогурт Чудо Коллекция Малин Фрап 2.5% 270г х15 БП",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "ФРАППЕ МАЛИНОВЫЙ",
                                     "level6": "ПЭТ",
@@ -5066,7 +5147,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 635,
-                                    "name2": "Йогурт Чудо Коллекция Малин Фрап 2.5% 270г х6 БП",
+                                    type: "product", "name": "Йогурт Чудо Коллекция Малин Фрап 2.5% 270г х6 БП",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "ФРАППЕ МАЛИНОВЫЙ",
                                     "level6": "ПЭТ",
@@ -5074,7 +5155,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 636,
-                                    "name2": "Йогурт Чудо Коллекция Шок Страч 3.4% 270г х15 БП",
+                                    type: "product", "name": "Йогурт Чудо Коллекция Шок Страч 3.4% 270г х15 БП",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "ШОКОЛАДНАЯ СТРАЧАТЕЛЛА",
                                     "level6": "ПЭТ",
@@ -5082,7 +5163,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 637,
-                                    "name2": "Йогурт Чудо Коллекция Шок Страч 3.4% 270г х6 БП",
+                                    type: "product", "name": "Йогурт Чудо Коллекция Шок Страч 3.4% 270г х6 БП",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "ШОКОЛАДНАЯ СТРАЧАТЕЛЛА",
                                     "level6": "ПЭТ",
@@ -5090,7 +5171,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 638,
-                                    "name2": "Йог ЧудоДет ПломбирМалиновЧернич 2.7% 85г ДойП 12Х",
+                                    type: "product", "name": "Йог ЧудоДет ПломбирМалиновЧернич 2.7% 85г ДойП 12Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ПЛОМБИР МАЛИНА, ЧЕРНИКА",
                                     "level6": "ДОЙ-ПАК",
@@ -5098,7 +5179,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 639,
-                                    "name2": "Йог ЧудоДет ТуттиФрут с печеньем 2.7% 85г ДойП 12Х",
+                                    type: "product", "name": "Йог ЧудоДет ТуттиФрут с печеньем 2.7% 85г ДойП 12Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ТУТТИ ФРУТТИ И ПЕЧЕНЬЕ",
                                     "level6": "ДОЙ-ПАК",
@@ -5106,7 +5187,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 640,
-                                    "name2": "Йогурт пит PL Красн цена Абрик 2.5% 0.5кг х10 РР",
+                                    type: "product", "name": "Йогурт пит PL Красн цена Абрик 2.5% 0.5кг х10 РР",
                                     "level4": "ЧАСТНАЯ МАРКА (КРАСНАЯ ЦЕНА)",
                                     "level5": "АБРИКОС",
                                     "level6": "ТЕТРА РЕКС",
@@ -5114,7 +5195,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 641,
-                                    "name2": "Йогурт пит PL Красн цена Клубн 2.5% 0.5кг х10 РР",
+                                    type: "product", "name": "Йогурт пит PL Красн цена Клубн 2.5% 0.5кг х10 РР",
                                     "level4": "ЧАСТНАЯ МАРКА (КРАСНАЯ ЦЕНА)",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА РЕКС",
@@ -5122,7 +5203,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 642,
-                                    "name2": "Йогурт пит Абрикос Каждый день 2.5% 0.5кг х10 РР",
+                                    type: "product", "name": "Йогурт пит Абрикос Каждый день 2.5% 0.5кг х10 РР",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "АБРИКОС",
                                     "level6": "ТЕТРА РЕКС",
@@ -5130,7 +5211,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 643,
-                                    "name2": "Йогурт пит Ополье Абрик 2.5% 0.5кг х10 РР",
+                                    type: "product", "name": "Йогурт пит Ополье Абрик 2.5% 0.5кг х10 РР",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "АБРИКОС",
                                     "level6": "ТЕТРА РЕКС",
@@ -5138,7 +5219,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 644,
-                                    "name2": "Йогурт пит Ополье Вишня 2.5% 0.5кг х10 РР",
+                                    type: "product", "name": "Йогурт пит Ополье Вишня 2.5% 0.5кг х10 РР",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "ВИШНЯ",
                                     "level6": "ТЕТРА РЕКС",
@@ -5146,7 +5227,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 645,
-                                    "name2": "Йогурт пит Ополье Клубн 2.5% 0.5кг х10 РР",
+                                    type: "product", "name": "Йогурт пит Ополье Клубн 2.5% 0.5кг х10 РР",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА РЕКС",
@@ -5154,7 +5235,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 646,
-                                    "name2": "Йогурт пит. Вишня Каждый день 2.5% 0.5кг х10 РР",
+                                    type: "product", "name": "Йогурт пит. Вишня Каждый день 2.5% 0.5кг х10 РР",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "ВИШНЯ",
                                     "level6": "ТЕТРА РЕКС",
@@ -5162,7 +5243,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 647,
-                                    "name2": "Йогурт фр Чудо Ананас-Банан 2.4% 270г х15 БутПл",
+                                    type: "product", "name": "Йогурт фр Чудо Ананас-Банан 2.4% 270г х15 БутПл",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС-БАНАН",
                                     "level6": "ПЭТ",
@@ -5170,7 +5251,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 648,
-                                    "name2": "Йогурт фр Чудо Ананас-Банан 2.4% 270г х6 БутПл",
+                                    type: "product", "name": "Йогурт фр Чудо Ананас-Банан 2.4% 270г х6 БутПл",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС-БАНАН",
                                     "level6": "ПЭТ",
@@ -5178,7 +5259,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 649,
-                                    "name2": "Йогурт фр Чудо вишня-череш 2.4% 690г БП 8Х",
+                                    type: "product", "name": "Йогурт фр Чудо вишня-череш 2.4% 690г БП 8Х",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ПЭТ",
@@ -5186,7 +5267,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 650,
-                                    "name2": "Йогурт фр Чудо Малина-Ежевика 2.4% 270г БП 15Х",
+                                    type: "product", "name": "Йогурт фр Чудо Малина-Ежевика 2.4% 270г БП 15Х",
                                     "level4": "ЧУДО",
                                     "level5": "МАЛИНА, ЕЖЕВИКА",
                                     "level6": "ПЭТ",
@@ -5194,7 +5275,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 651,
-                                    "name2": "Йогурт фр Чудо Малина-Ежевика 2.4% 270г БП 6Х",
+                                    type: "product", "name": "Йогурт фр Чудо Малина-Ежевика 2.4% 270г БП 6Х",
                                     "level4": "ЧУДО",
                                     "level5": "МАЛИНА, ЕЖЕВИКА",
                                     "level6": "ПЭТ",
@@ -5202,7 +5283,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 652,
-                                    "name2": "Йогурт фр Чудо Черника-Малина 2.4% 270г х15 БутПл",
+                                    type: "product", "name": "Йогурт фр Чудо Черника-Малина 2.4% 270г х15 БутПл",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "ПЭТ",
@@ -5210,7 +5291,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 653,
-                                    "name2": "Йогурт фр Чудо Черника-Малина 2.4% 270г х6 БутПл",
+                                    type: "product", "name": "Йогурт фр Чудо Черника-Малина 2.4% 270г х6 БутПл",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА-МАЛИНА",
                                     "level6": "ПЭТ",
@@ -5218,7 +5299,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 654,
-                                    "name2": "Йогурт фр Чудо Ягодн мороженое 2.4% 270г БП 15Х",
+                                    type: "product", "name": "Йогурт фр Чудо Ягодн мороженое 2.4% 270г БП 15Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЯГОДЫ, МОРОЖЕНОЕ",
                                     "level6": "ПЭТ",
@@ -5226,7 +5307,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 655,
-                                    "name2": "Йогурт фр Чудо Ягодн мороженое 2.4% 270г БП 6Х",
+                                    type: "product", "name": "Йогурт фр Чудо Ягодн мороженое 2.4% 270г БП 6Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЯГОДЫ, МОРОЖЕНОЕ",
                                     "level6": "ПЭТ",
@@ -5234,7 +5315,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 656,
-                                    "name2": "Йогурт фр Чудо Ягодное мороженое 2.4% 690г БП 8Х",
+                                    type: "product", "name": "Йогурт фр Чудо Ягодное мороженое 2.4% 690г БП 8Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЯГОДЫ, МОРОЖЕНОЕ",
                                     "level6": "ПЭТ",
@@ -5242,7 +5323,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 657,
-                                    "name2": "Йогурт Фрукт Чудо Виш Череш 2.4% 290г х15 ПЭТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Виш Череш 2.4% 290г х15 ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ПЭТ",
@@ -5250,7 +5331,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 658,
-                                    "name2": "Йогурт фрукт Чудо Вишня-Череш 2.4% 270г х15  БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Вишня-Череш 2.4% 270г х15  БП",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ПЭТ",
@@ -5258,7 +5339,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 659,
-                                    "name2": "Йогурт фрукт Чудо Вишня-Череш 2.4% 270г х6 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Вишня-Череш 2.4% 270г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "ПЭТ",
@@ -5266,7 +5347,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 660,
-                                    "name2": "Йогурт фрукт Чудо Детки Клубника 2.2% 200г БП 4Х",
+                                    type: "product", "name": "Йогурт фрукт Чудо Детки Клубника 2.2% 200г БП 4Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -5274,7 +5355,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 661,
-                                    "name2": "Йогурт фрукт Чудо Детки Ябл-Бан 2.2% 200г БП 4Х",
+                                    type: "product", "name": "Йогурт фрукт Чудо Детки Ябл-Бан 2.2% 200г БП 4Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ПЭТ",
@@ -5282,7 +5363,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 662,
-                                    "name2": "Йогурт фрукт Чудо Киви-Марак-Апел 2.4% 270г х15 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Киви-Марак-Апел 2.4% 270г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КИВИ, АПЕЛЬСИН, МАРАКУЙЯ",
                                     "level6": "ПЭТ",
@@ -5290,7 +5371,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 663,
-                                    "name2": "Йогурт фрукт Чудо Киви-Марак-Апел 2.4% 270г х6 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Киви-Марак-Апел 2.4% 270г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КИВИ, АПЕЛЬСИН, МАРАКУЙЯ",
                                     "level6": "ПЭТ",
@@ -5298,7 +5379,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 664,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Земл 2.4% 290г х15 ПЭТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Земл 2.4% 290г х15 ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -5306,7 +5387,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 665,
-                                    "name2": "Йогурт Фрукт Чудо Клуб Земл 2.4% 690г х8 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Клуб Земл 2.4% 690г х8 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -5314,7 +5395,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 666,
-                                    "name2": "Йогурт фрукт Чудо Клубн-Землян 2.4% 270г х15 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Клубн-Землян 2.4% 270г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -5322,7 +5403,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 667,
-                                    "name2": "Йогурт фрукт Чудо Клубн-Землян 2.4% 270г х6 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Клубн-Землян 2.4% 270г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -5330,7 +5411,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 668,
-                                    "name2": "Йогурт фрукт Чудо Перс-Манго-Дыня 2.4% 270г х15 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Перс-Манго-Дыня 2.4% 270г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК, МАНГО, ДЫНЯ",
                                     "level6": "ПЭТ",
@@ -5338,7 +5419,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 669,
-                                    "name2": "Йогурт фрукт Чудо Перс-Манго-Дыня 2.4% 270г х6 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Перс-Манго-Дыня 2.4% 270г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК, МАНГО, ДЫНЯ",
                                     "level6": "ПЭТ",
@@ -5346,7 +5427,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 670,
-                                    "name2": "Йогурт фрукт Чудо Персик-Абрик 2.4% 270г х15 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Персик-Абрик 2.4% 270г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-АБРИКОС",
                                     "level6": "ПЭТ",
@@ -5354,7 +5435,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 671,
-                                    "name2": "Йогурт фрукт Чудо Персик-Абрик 2.4% 270г х6 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Персик-Абрик 2.4% 270г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-АБРИКОС",
                                     "level6": "ПЭТ",
@@ -5362,7 +5443,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 672,
-                                    "name2": "Йогурт Фрукт Чудо Персик Абр 2.4% 290г х15 ПЭТ",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Персик Абр 2.4% 290г х15 ПЭТ",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-АБРИКОС",
                                     "level6": "ПЭТ",
@@ -5370,7 +5451,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 673,
-                                    "name2": "Йогурт Фрукт Чудо Персик Абр 2.4% 690г х8 БП",
+                                    type: "product", "name": "Йогурт Фрукт Чудо Персик Абр 2.4% 690г х8 БП",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-АБРИКОС",
                                     "level6": "ПЭТ",
@@ -5378,7 +5459,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 674,
-                                    "name2": "Йогурт фрукт Чудо Северные ягоды 2.4% 270г х15 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Северные ягоды 2.4% 270г х15 БП",
                                     "level4": "ЧУДО",
                                     "level5": "БРУСНИКА, ГОЛУБИКА, МОРОШКА",
                                     "level6": "ПЭТ",
@@ -5386,7 +5467,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 675,
-                                    "name2": "Йогурт фрукт Чудо Северные ягоды 2.4% 270г х6 БП",
+                                    type: "product", "name": "Йогурт фрукт Чудо Северные ягоды 2.4% 270г х6 БП",
                                     "level4": "ЧУДО",
                                     "level5": "БРУСНИКА, ГОЛУБИКА, МОРОШКА",
                                     "level6": "ПЭТ",
@@ -5394,7 +5475,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 676,
-                                    "name2": "Йогурт Фрукт ЧудоДетки Клуб 2.2% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт ЧудоДетки Клуб 2.2% 200г х12 БП ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -5402,7 +5483,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 677,
-                                    "name2": "Йогурт Фрукт ЧудоДетки Клуб 2.2% 200г х24 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт ЧудоДетки Клуб 2.2% 200г х24 БП ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -5410,7 +5491,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 678,
-                                    "name2": "Йогурт Фрукт ЧудоДетки Клуб Мал 2.5% 85гх12ДойП ДП",
+                                    type: "product", "name": "Йогурт Фрукт ЧудоДетки Клуб Мал 2.5% 85гх12ДойП ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА-МАЛИНА",
                                     "level6": "ДОЙ-ПАК",
@@ -5418,7 +5499,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 679,
-                                    "name2": "Йогурт Фрукт ЧудоДетки МультФр 2.5% 85гх12 ДойП ДП",
+                                    type: "product", "name": "Йогурт Фрукт ЧудоДетки МультФр 2.5% 85гх12 ДойП ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ДОЙ-ПАК",
@@ -5426,7 +5507,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 680,
-                                    "name2": "Йогурт Фрукт ЧудоДетки Ябл Бан 2.2% 200г х12 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт ЧудоДетки Ябл Бан 2.2% 200г х12 БП ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ПЭТ",
@@ -5434,7 +5515,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 681,
-                                    "name2": "Йогурт Фрукт ЧудоДетки Ябл Бан 2.2% 200г х24 БП ДП",
+                                    type: "product", "name": "Йогурт Фрукт ЧудоДетки Ябл Бан 2.2% 200г х24 БП ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "ПЭТ",
@@ -5442,7 +5523,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 682,
-                                    "name2": "Йогурт ЧудоДет Пломбир КлубнБанан 2.2% 200г БП 12Х",
+                                    type: "product", "name": "Йогурт ЧудоДет Пломбир КлубнБанан 2.2% 200г БП 12Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ПЛОМБИР КЛУБНИКА, БАНАН",
                                     "level6": "ПЭТ",
@@ -5450,7 +5531,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 683,
-                                    "name2": "Йогурт ЧудоДет Пломбир КлубнБанан 2.2% 200г БП 4Х",
+                                    type: "product", "name": "Йогурт ЧудоДет Пломбир КлубнБанан 2.2% 200г БП 4Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ПЛОМБИР КЛУБНИКА, БАНАН",
                                     "level6": "ПЭТ",
@@ -5458,7 +5539,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 684,
-                                    "name2": "ЙогуртФр Чудо Гавайский Микс 2.4% 270г БП 15Х",
+                                    type: "product", "name": "ЙогуртФр Чудо Гавайский Микс 2.4% 270г БП 15Х",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС, МАНГО, ЧИА",
                                     "level6": "ПЭТ",
@@ -5466,7 +5547,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 685,
-                                    "name2": "ЙогуртФр Чудо Гавайский Микс 2.4% 270г БП 6Х",
+                                    type: "product", "name": "ЙогуртФр Чудо Гавайский Микс 2.4% 270г БП 6Х",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС, МАНГО, ЧИА",
                                     "level6": "ПЭТ",
@@ -5474,7 +5555,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 686,
-                                    "name2": "ЙогФрук Чудо ГолубБруснКняженик 2.4% 270г БП 15Х",
+                                    type: "product", "name": "ЙогФрук Чудо ГолубБруснКняженик 2.4% 270г БП 15Х",
                                     "level4": "ЧУДО",
                                     "level5": "ГОЛУБИКА, БРУСНИКА, КНЯЖЕНИКА",
                                     "level6": "ПЭТ",
@@ -5482,7 +5563,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 687,
-                                    "name2": "ЙогФрук Чудо ГолубБруснКняженик 2.4% 270г БП 6Х",
+                                    type: "product", "name": "ЙогФрук Чудо ГолубБруснКняженик 2.4% 270г БП 6Х",
                                     "level4": "ЧУДО",
                                     "level5": "ГОЛУБИКА, БРУСНИКА, КНЯЖЕНИКА",
                                     "level6": "ПЭТ",
@@ -5490,7 +5571,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 688,
-                                    "name2": "МКК Биойогурт Кунгурский 1.5% 450г ФП",
+                                    type: "product", "name": "МКК Биойогурт Кунгурский 1.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -5498,7 +5579,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 689,
-                                    "name2": "МКК Биойогурт пит Кунгурский Клубн 1.5% 450г ФП",
+                                    type: "product", "name": "МКК Биойогурт пит Кунгурский Клубн 1.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ФИНПАК",
@@ -5506,7 +5587,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 690,
-                                    "name2": "МКК Биойогурт пит Кунгурский Персик 1.5% 450г ФП",
+                                    type: "product", "name": "МКК Биойогурт пит Кунгурский Персик 1.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ФИНПАК",
@@ -5514,7 +5595,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 691,
-                                    "name2": "МКК Биойогурт пит Кунгурский Черника 1.5% 450г ФП",
+                                    type: "product", "name": "МКК Биойогурт пит Кунгурский Черника 1.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ФИНПАК",
@@ -5522,7 +5603,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 692,
-                                    "name2": "МКК Йогурт пит. Кунгурский Клубника 1.5% 450г ФП",
+                                    type: "product", "name": "МКК Йогурт пит. Кунгурский Клубника 1.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ФИНПАК",
@@ -5530,7 +5611,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 693,
-                                    "name2": "МКК Йогурт пит. Кунгурский Персик 1.5% 450г ФП",
+                                    type: "product", "name": "МКК Йогурт пит. Кунгурский Персик 1.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ФИНПАК",
@@ -5538,7 +5619,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 694,
-                                    "name2": "МКК Йогурт пит. Кунгурский Черника 1.5% 450г ФП",
+                                    type: "product", "name": "МКК Йогурт пит. Кунгурский Черника 1.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ФИНПАК",
@@ -5546,7 +5627,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 695,
-                                    "name2": "Напит кис-мол Фругурт Клубн 1.5% 475г х10 TRTwCap",
+                                    type: "product", "name": "Напит кис-мол Фругурт Клубн 1.5% 475г х10 TRTwCap",
                                     "level4": "ФРУГУРТ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА РЕКС",
@@ -5554,7 +5635,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 696,
-                                    "name2": "Напит кис-мол Фругурт Персик 1.5% 475г х10 TRTwCap",
+                                    type: "product", "name": "Напит кис-мол Фругурт Персик 1.5% 475г х10 TRTwCap",
                                     "level4": "ФРУГУРТ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ТЕТРА РЕКС",
@@ -5562,7 +5643,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 697,
-                                    "name2": "Напит кисмол Фругурт Персик 1.5% 475г х10 Ппак/ТР",
+                                    type: "product", "name": "Напит кисмол Фругурт Персик 1.5% 475г х10 Ппак/ТР",
                                     "level4": "ФРУГУРТ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ТЕТРА РЕКС",
@@ -5570,7 +5651,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 698,
-                                    "name2": "Напиток кисмол Фругурт Клуб 1.5% 475г х10 Ппак/ТР",
+                                    type: "product", "name": "Напиток кисмол Фругурт Клуб 1.5% 475г х10 Ппак/ТР",
                                     "level4": "ФРУГУРТ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА РЕКС",
@@ -5578,7 +5659,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 699,
-                                    "name2": "Напиток кисмол Фругурт Клуб 1.5% 950г х10 ТР",
+                                    type: "product", "name": "Напиток кисмол Фругурт Клуб 1.5% 950г х10 ТР",
                                     "level4": "ФРУГУРТ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА РЕКС",
@@ -5586,7 +5667,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 700,
-                                    "name2": "Напиток кисмол Фругурт Клуб 1.5% 950г х10 ТРТвК",
+                                    type: "product", "name": "Напиток кисмол Фругурт Клуб 1.5% 950г х10 ТРТвК",
                                     "level4": "ФРУГУРТ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА РЕКС",
@@ -5594,7 +5675,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 701,
-                                    "name2": "Напиток кисмол Фругурт Персик 1.5% 950г х10 ТР",
+                                    type: "product", "name": "Напиток кисмол Фругурт Персик 1.5% 950г х10 ТР",
                                     "level4": "ФРУГУРТ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ТЕТРА РЕКС",
@@ -5602,7 +5683,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 702,
-                                    "name2": "Напиток кисмол Фругурт Персик 1.5% 950г х10 ТРТвК",
+                                    type: "product", "name": "Напиток кисмол Фругурт Персик 1.5% 950г х10 ТРТвК",
                                     "level4": "ФРУГУРТ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ТЕТРА РЕКС",
@@ -5610,7 +5691,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 703,
-                                    "name2": "ЮП Йогурт пит Клубника Каждый день 2.5% 0.5кг РР",
+                                    type: "product", "name": "ЮП Йогурт пит Клубника Каждый день 2.5% 0.5кг РР",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ТЕТРА РЕКС",
@@ -5623,16 +5704,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 704,
                     "name": "Кефир",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 705,
                             "name": "Кефир",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 706,
-                                    "name2": "Биокефир Витам БиоМакс 1% 1000г х12 СКСкК",
+                                    type: "product", "name": "Биокефир Витам БиоМакс 1% 1000г х12 СКСкК",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5640,7 +5721,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 707,
-                                    "name2": "Биокефир Кунгурский 2.5% 450г ФП",
+                                    type: "product", "name": "Биокефир Кунгурский 2.5% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -5648,7 +5729,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 708,
-                                    "name2": "Биокефир с бифбак БиоМакс 2.5% 1000г х12 СКСкК",
+                                    type: "product", "name": "Биокефир с бифбак БиоМакс 2.5% 1000г х12 СКСкК",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5656,7 +5737,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 709,
-                                    "name2": "Биокефирный БиоМакс 2.5% 450г х12 ПЭТ",
+                                    type: "product", "name": "Биокефирный БиоМакс 2.5% 450г х12 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5664,7 +5745,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 710,
-                                    "name2": "Биокефирный БиоМакс 2.5% 950г х6 ПЭТ",
+                                    type: "product", "name": "Биокефирный БиоМакс 2.5% 950г х6 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5672,7 +5753,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 711,
-                                    "name2": "Биокефирный БиоМакс Кефирный 1% 450г х12 ПЭТ",
+                                    type: "product", "name": "Биокефирный БиоМакс Кефирный 1% 450г х12 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5680,7 +5761,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 712,
-                                    "name2": "Биокефирный БиоМакс Кефирный 1% 950г х6 ПЭТ",
+                                    type: "product", "name": "Биокефирный БиоМакс Кефирный 1% 950г х6 ПЭТ",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5688,7 +5769,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 713,
-                                    "name2": "Биокефир БиоМакс 2.5% 475г х10 ППак",
+                                    type: "product", "name": "Биокефир БиоМакс 2.5% 475г х10 ППак",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5696,7 +5777,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 714,
-                                    "name2": "Биокефир БиоМакс 2.5% 515г х12 СКСкК",
+                                    type: "product", "name": "Биокефир БиоМакс 2.5% 515г х12 СКСкК",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5704,7 +5785,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 715,
-                                    "name2": "Биокефир БиоМакс 2.5% 950г х10 ППакК",
+                                    type: "product", "name": "Биокефир БиоМакс 2.5% 950г х10 ППакК",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5712,7 +5793,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 716,
-                                    "name2": "Биокефир с бифбак БиоМакс 2.5% 1000г х10 СКСкК",
+                                    type: "product", "name": "Биокефир с бифбак БиоМакс 2.5% 1000г х10 СКСкК",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5720,7 +5801,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 717,
-                                    "name2": "Биокефир с бифбак БиоМакс 2.5% 500г х10 СКСкК",
+                                    type: "product", "name": "Биокефир с бифбак БиоМакс 2.5% 500г х10 СКСкК",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5728,7 +5809,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 718,
-                                    "name2": "Биокефирный продукт Bio-Max 1% 950г х10 PP с крышк",
+                                    type: "product", "name": "Биокефирный продукт Bio-Max 1% 950г х10 PP с крышк",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5736,7 +5817,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 719,
-                                    "name2": "Биокефирный продукт BioMax 2.5% 475г х10 PP с крыш",
+                                    type: "product", "name": "Биокефирный продукт BioMax 2.5% 475г х10 PP с крыш",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5744,7 +5825,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 720,
-                                    "name2": "Биокефирный продукт BioMax 2.5% 950г х10 PP с крыш",
+                                    type: "product", "name": "Биокефирный продукт BioMax 2.5% 950г х10 PP с крыш",
                                     "level4": "БИО-МАХ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5752,7 +5833,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 721,
-                                    "name2": "Кефир 1% 0.5кг РР Каждый день",
+                                    type: "product", "name": "Кефир 1% 0.5кг РР Каждый день",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5760,7 +5841,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 722,
-                                    "name2": "Кефир 1% 1кг РР Каждый день",
+                                    type: "product", "name": "Кефир 1% 1кг РР Каждый день",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5768,7 +5849,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 723,
-                                    "name2": "Кефир PL Романов луг 2.5% 0.5кг х12 TBsq FC",
+                                    type: "product", "name": "Кефир PL Романов луг 2.5% 0.5кг х12 TBsq FC",
                                     "level4": "ЧАСТНАЯ МАРКА (РОМАНОВ ЛУГ)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5776,7 +5857,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 724,
-                                    "name2": "Кефир Веселый молочник 3.2% 950г х10 PurePкрыш",
+                                    type: "product", "name": "Кефир Веселый молочник 3.2% 950г х10 PurePкрыш",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5784,7 +5865,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 725,
-                                    "name2": "Кефир ДВД 1% 475г х10 ППакК/ТРТвК",
+                                    type: "product", "name": "Кефир ДВД 1% 475г х10 ППакК/ТРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5792,7 +5873,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 726,
-                                    "name2": "Кефир ДВД 1% 475г х10 ТРТвК",
+                                    type: "product", "name": "Кефир ДВД 1% 475г х10 ТРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5800,7 +5881,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 727,
-                                    "name2": "Кефир ДВД 2.5% 900г х6 ПЭТ",
+                                    type: "product", "name": "Кефир ДВД 2.5% 900г х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5808,7 +5889,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 728,
-                                    "name2": "Кефир ДВД 2.5% 950г х12 ППакК",
+                                    type: "product", "name": "Кефир ДВД 2.5% 950г х12 ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5816,7 +5897,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 729,
-                                    "name2": "Кефир ДВД 3.2% 475г х10 ТРТвК",
+                                    type: "product", "name": "Кефир ДВД 3.2% 475г х10 ТРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5824,7 +5905,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 730,
-                                    "name2": "Кефир ДВД 3.2% 950г х10 ППакК/ТРТвК",
+                                    type: "product", "name": "Кефир ДВД 3.2% 950г х10 ППакК/ТРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5832,7 +5913,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 731,
-                                    "name2": "Кефир ДВД 3.2% 950г х12 ППакК",
+                                    type: "product", "name": "Кефир ДВД 3.2% 950г х12 ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5840,7 +5921,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 732,
-                                    "name2": "Кефир ДВД Отборный 4% 1000г х12 СКСкК",
+                                    type: "product", "name": "Кефир ДВД Отборный 4% 1000г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5848,7 +5929,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 733,
-                                    "name2": "Кефир КубБуренка 2.5% 1000г х10 СКСкК",
+                                    type: "product", "name": "Кефир КубБуренка 2.5% 1000г х10 СКСкК",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5856,7 +5937,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 734,
-                                    "name2": "Кефир Кунгурский 2.5% 1000г х20 ФП Цена Ниже",
+                                    type: "product", "name": "Кефир Кунгурский 2.5% 1000г х20 ФП Цена Ниже",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -5864,7 +5945,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 735,
-                                    "name2": "Кефир Пермский 2.5% 900г ФП",
+                                    type: "product", "name": "Кефир Пермский 2.5% 900г ФП",
                                     "level4": "NON BRANDED",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -5872,7 +5953,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 736,
-                                    "name2": "Кефирный ДВД Клуб 2.1% 450г х12 ПЭТ",
+                                    type: "product", "name": "Кефирный ДВД Клуб 2.1% 450г х12 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ПЭТ",
@@ -5880,7 +5961,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 737,
-                                    "name2": "Кефирный ДВД Черника Ежев 2.1% 450г х12 ПЭТ",
+                                    type: "product", "name": "Кефирный ДВД Черника Ежев 2.1% 450г х12 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "ЧЕРНИКА, ЕЖЕВИКА",
                                     "level6": "ПЭТ",
@@ -5888,7 +5969,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 738,
-                                    "name2": "Нап Кефирный ВесМол 1% 900г х6 ПЭТ",
+                                    type: "product", "name": "Нап Кефирный ВесМол 1% 900г х6 ПЭТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5896,7 +5977,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 739,
-                                    "name2": "Продукт Кефирный ДВД 1% 930г х6 ПЭТ",
+                                    type: "product", "name": "Продукт Кефирный ДВД 1% 930г х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5904,7 +5985,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 740,
-                                    "name2": "Кефир \"Billa\" 1% 930г х6 ПЭТ",
+                                    type: "product", "name": "Кефир \"Billa\" 1% 930г х6 ПЭТ",
                                     "level4": "ЧАСТНАЯ МАРКА (БИЛЛА)",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5912,7 +5993,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 741,
-                                    "name2": "Кефир \"Billa\" 3.2% 930г х6 ПЭТ",
+                                    type: "product", "name": "Кефир \"Billa\" 3.2% 930г х6 ПЭТ",
                                     "level4": "ЧАСТНАЯ МАРКА (БИЛЛА)",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -5920,7 +6001,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 742,
-                                    "name2": "Кефир Billa 3.2% 0.5кг TBsq FC 12Х",
+                                    type: "product", "name": "Кефир Billa 3.2% 0.5кг TBsq FC 12Х",
                                     "level4": "ЧАСТНАЯ МАРКА (БИЛЛА)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -5928,7 +6009,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 743,
-                                    "name2": "Кефир Веселый молочник 1% 900г х10 TRTwistCup",
+                                    type: "product", "name": "Кефир Веселый молочник 1% 900г х10 TRTwistCup",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5936,7 +6017,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 744,
-                                    "name2": "Кефир ВесМол 1% 0.950кг х10 ТРТвК",
+                                    type: "product", "name": "Кефир ВесМол 1% 0.950кг х10 ТРТвК",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5944,7 +6025,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 745,
-                                    "name2": "Кефир ВесМол 1% 950г х10 TР/ПпакК",
+                                    type: "product", "name": "Кефир ВесМол 1% 950г х10 TР/ПпакК",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5952,7 +6033,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 746,
-                                    "name2": "Кефир ВесМол 1% 950г х12 ППакК",
+                                    type: "product", "name": "Кефир ВесМол 1% 950г х12 ППакК",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5960,7 +6041,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 747,
-                                    "name2": "Кефир ВесМол 2.5% 475г PP с крышкой 10Х",
+                                    type: "product", "name": "Кефир ВесМол 2.5% 475г PP с крышкой 10Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5968,7 +6049,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 748,
-                                    "name2": "Кефир ВесМол 2.5% 475г х10 ППак",
+                                    type: "product", "name": "Кефир ВесМол 2.5% 475г х10 ППак",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5976,7 +6057,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 749,
-                                    "name2": "Кефир ВесМол 2.5% 950г PP с крышкой 10Х",
+                                    type: "product", "name": "Кефир ВесМол 2.5% 950г PP с крышкой 10Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5984,7 +6065,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 750,
-                                    "name2": "Кефир ВесМол 2.5% 950г PurePack с крыш 10Х",
+                                    type: "product", "name": "Кефир ВесМол 2.5% 950г PurePack с крыш 10Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -5992,7 +6073,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 751,
-                                    "name2": "Кефир ВесМол 2.5% 950г х12 ППакК",
+                                    type: "product", "name": "Кефир ВесМол 2.5% 950г х12 ППакК",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6000,7 +6081,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 752,
-                                    "name2": "Кефир ВесМол 3.2% 950г PurePack с крыш 10Х",
+                                    type: "product", "name": "Кефир ВесМол 3.2% 950г PurePack с крыш 10Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6008,7 +6089,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 753,
-                                    "name2": "Кефир ВесМол 3.2% 950г х12 ППакК",
+                                    type: "product", "name": "Кефир ВесМол 3.2% 950г х12 ППакК",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6016,7 +6097,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 754,
-                                    "name2": "Кефир ДВД 1% 1000г х10 ППакК",
+                                    type: "product", "name": "Кефир ДВД 1% 1000г х10 ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6024,7 +6105,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 755,
-                                    "name2": "Кефир ДВД 1% 1000г х12 СКСкК",
+                                    type: "product", "name": "Кефир ДВД 1% 1000г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6032,7 +6113,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 756,
-                                    "name2": "Кефир ДВД 1% 430г х10 ТРТвК",
+                                    type: "product", "name": "Кефир ДВД 1% 430г х10 ТРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6040,7 +6121,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 757,
-                                    "name2": "Кефир ДВД 1% 450г х12 ПЭТ",
+                                    type: "product", "name": "Кефир ДВД 1% 450г х12 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6048,7 +6129,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 758,
-                                    "name2": "Кефир ДВД 1% 515г х10 ППакК",
+                                    type: "product", "name": "Кефир ДВД 1% 515г х10 ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6056,7 +6137,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 759,
-                                    "name2": "Кефир ДВД 1% 515г х12 СКСкК",
+                                    type: "product", "name": "Кефир ДВД 1% 515г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6064,7 +6145,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 760,
-                                    "name2": "Кефир ДВД 1% 900г х6 ПЭТ",
+                                    type: "product", "name": "Кефир ДВД 1% 900г х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6072,7 +6153,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 761,
-                                    "name2": "Кефир ДвД 1% 950г PP с крышкой 10Х",
+                                    type: "product", "name": "Кефир ДвД 1% 950г PP с крышкой 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6080,7 +6161,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 762,
-                                    "name2": "Кефир ДВД 1% 950г PurePack с кр 10Х",
+                                    type: "product", "name": "Кефир ДВД 1% 950г PurePack с кр 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6088,7 +6169,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 763,
-                                    "name2": "Кефир ДВД 1% 950г х12 ППакК",
+                                    type: "product", "name": "Кефир ДВД 1% 950г х12 ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6096,7 +6177,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 764,
-                                    "name2": "Кефир ДВД 2.5% 1000г х10 ППак",
+                                    type: "product", "name": "Кефир ДВД 2.5% 1000г х10 ППак",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6104,7 +6185,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 765,
-                                    "name2": "Кефир ДВД 2.5% 1000г х12 СКСкК",
+                                    type: "product", "name": "Кефир ДВД 2.5% 1000г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6112,7 +6193,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 766,
-                                    "name2": "Кефир ДВД 2.5% 475г х10 ТРТвК",
+                                    type: "product", "name": "Кефир ДВД 2.5% 475г х10 ТРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6120,7 +6201,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 767,
-                                    "name2": "Кефир ДВД 3.2% 1000г х12 СКСкК",
+                                    type: "product", "name": "Кефир ДВД 3.2% 1000г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6128,7 +6209,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 768,
-                                    "name2": "Кефир ДВД 3.2% 430г х10 ТРТвК",
+                                    type: "product", "name": "Кефир ДВД 3.2% 430г х10 ТРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6136,7 +6217,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 769,
-                                    "name2": "Кефир ДВД 3.2% 475г PurePack с крыш 10Х",
+                                    type: "product", "name": "Кефир ДВД 3.2% 475г PurePack с крыш 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6144,7 +6225,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 770,
-                                    "name2": "Кефир ДВД 3.2% 475г х12 ППакК",
+                                    type: "product", "name": "Кефир ДВД 3.2% 475г х12 ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6152,7 +6233,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 771,
-                                    "name2": "Кефир ДВД 3.2% 515г х12 СКСкК",
+                                    type: "product", "name": "Кефир ДВД 3.2% 515г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6160,7 +6241,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 772,
-                                    "name2": "Кефир ДВД 3.2% 900г х6 ПЭТ",
+                                    type: "product", "name": "Кефир ДВД 3.2% 900г х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6168,7 +6249,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 773,
-                                    "name2": "Кефир ДВД 3.2% 950г PurePack с кр 10Х",
+                                    type: "product", "name": "Кефир ДВД 3.2% 950г PurePack с кр 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6176,7 +6257,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 774,
-                                    "name2": "Кефир Домик в деревне 1% 475г PP c крыш 10Х",
+                                    type: "product", "name": "Кефир Домик в деревне 1% 475г PP c крыш 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6184,7 +6265,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 775,
-                                    "name2": "Кефир Домик в деревне 2.5% 950г PP с крыш 10Х",
+                                    type: "product", "name": "Кефир Домик в деревне 2.5% 950г PP с крыш 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6192,7 +6273,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 776,
-                                    "name2": "Кефир Домик в деревне 2.5% 950г PPкр 10Х",
+                                    type: "product", "name": "Кефир Домик в деревне 2.5% 950г PPкр 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6200,7 +6281,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 777,
-                                    "name2": "Кефир Кубанская буренка 2.5% 450г TB Sq 10Х",
+                                    type: "product", "name": "Кефир Кубанская буренка 2.5% 450г TB Sq 10Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6208,7 +6289,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 778,
-                                    "name2": "Кефир Кубанская Буренка 2.5% 800г ФП 12Х",
+                                    type: "product", "name": "Кефир Кубанская Буренка 2.5% 800г ФП 12Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6216,7 +6297,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 779,
-                                    "name2": "Кефир Кубанская Буренка 2.5% 900г х12 ФП ГОФР",
+                                    type: "product", "name": "Кефир Кубанская Буренка 2.5% 900г х12 ФП ГОФР",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6224,7 +6305,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 780,
-                                    "name2": "Кефир Кубанская буренка 2.5% 950г TBSq 10Х",
+                                    type: "product", "name": "Кефир Кубанская буренка 2.5% 950г TBSq 10Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6232,7 +6313,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 781,
-                                    "name2": "Кефир КубБуренка 1% 900г х6 ПЭТ",
+                                    type: "product", "name": "Кефир КубБуренка 1% 900г х6 ПЭТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6240,7 +6321,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 782,
-                                    "name2": "Кефир КубБуренка 2.5% 500г х10 СКСкК",
+                                    type: "product", "name": "Кефир КубБуренка 2.5% 500г х10 СКСкК",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6248,7 +6329,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 783,
-                                    "name2": "Кефир КубБуренка 2.5% 900г х18 ПлФП",
+                                    type: "product", "name": "Кефир КубБуренка 2.5% 900г х18 ПлФП",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6256,7 +6337,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 784,
-                                    "name2": "Кефир КубБуренка 2.5% 900г х6 ПЭТ",
+                                    type: "product", "name": "Кефир КубБуренка 2.5% 900г х6 ПЭТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6264,7 +6345,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 785,
-                                    "name2": "Кефир Кунгурский 1% 190г МСТ 35Х",
+                                    type: "product", "name": "Кефир Кунгурский 1% 190г МСТ 35Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -6272,7 +6353,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 786,
-                                    "name2": "Кефир Кунгурский 2.5% 190г МСТ 35Х",
+                                    type: "product", "name": "Кефир Кунгурский 2.5% 190г МСТ 35Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -6280,7 +6361,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 787,
-                                    "name2": "Кефир Ополье 1% 1х12х1кг TBsq FC",
+                                    type: "product", "name": "Кефир Ополье 1% 1х12х1кг TBsq FC",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6288,7 +6369,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 788,
-                                    "name2": "Кефир Ополье 1% 1х8х930мл ПЭТ",
+                                    type: "product", "name": "Кефир Ополье 1% 1х8х930мл ПЭТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6296,7 +6377,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 789,
-                                    "name2": "Кефир Ополье 3,2% 1х8х930мл ПЭТ",
+                                    type: "product", "name": "Кефир Ополье 3,2% 1х8х930мл ПЭТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6304,7 +6385,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 790,
-                                    "name2": "Кефир Ополье 3.2% 1кг TBsq FC",
+                                    type: "product", "name": "Кефир Ополье 3.2% 1кг TBsq FC",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6312,7 +6393,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 791,
-                                    "name2": "Кефир Ополье 3.2% 1х12х0.5кг TBsq FC",
+                                    type: "product", "name": "Кефир Ополье 3.2% 1х12х0.5кг TBsq FC",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6320,7 +6401,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 792,
-                                    "name2": "Кефир Русское молоко 1% 900г х10 PP",
+                                    type: "product", "name": "Кефир Русское молоко 1% 900г х10 PP",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6328,7 +6409,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 793,
-                                    "name2": "МКК Кефир 2,5% 900г ПЭТ",
+                                    type: "product", "name": "МКК Кефир 2,5% 900г ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6336,7 +6417,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 794,
-                                    "name2": "МКК Кефир Кунгурский 1% 1000г ФП",
+                                    type: "product", "name": "МКК Кефир Кунгурский 1% 1000г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6344,7 +6425,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 795,
-                                    "name2": "МКК Кефир Кунгурский 1% 500г x40 ФП",
+                                    type: "product", "name": "МКК Кефир Кунгурский 1% 500г x40 ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6352,7 +6433,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 796,
-                                    "name2": "МКК Кефир Кунгурский 1% 900г ПЭТ",
+                                    type: "product", "name": "МКК Кефир Кунгурский 1% 900г ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6360,7 +6441,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 797,
-                                    "name2": "МКК Кефир Кунгурский 2.5% 1000г ФП",
+                                    type: "product", "name": "МКК Кефир Кунгурский 2.5% 1000г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6368,7 +6449,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 798,
-                                    "name2": "МКК Кефир Кунгурский 2.5% 500г ФП",
+                                    type: "product", "name": "МКК Кефир Кунгурский 2.5% 500г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6376,7 +6457,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 799,
-                                    "name2": "МКК Кефир Кунгурский 2.5% 900г эколин",
+                                    type: "product", "name": "МКК Кефир Кунгурский 2.5% 900г эколин",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6384,7 +6465,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 800,
-                                    "name2": "ЮП Биокефир Лакомо 1% 0.5кг TBsq FC",
+                                    type: "product", "name": "ЮП Биокефир Лакомо 1% 0.5кг TBsq FC",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6392,7 +6473,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 801,
-                                    "name2": "ЮП Биокефир Ополье 1% 0.5кг TBsq FC",
+                                    type: "product", "name": "ЮП Биокефир Ополье 1% 0.5кг TBsq FC",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6400,7 +6481,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 802,
-                                    "name2": "ЮП Кефир 3.2% 0.5кг РР Каждый день",
+                                    type: "product", "name": "ЮП Кефир 3.2% 0.5кг РР Каждый день",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6408,7 +6489,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 803,
-                                    "name2": "ЮП Кефир 3.2% 1кг РР Каждый день",
+                                    type: "product", "name": "ЮП Кефир 3.2% 1кг РР Каждый день",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6416,7 +6497,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 804,
-                                    "name2": "ЮП Кефир PL Лакомо 1% 1кг TBsq FC",
+                                    type: "product", "name": "ЮП Кефир PL Лакомо 1% 1кг TBsq FC",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6424,7 +6505,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 805,
-                                    "name2": "ЮП Кефир PL Лакомо 3.2% 1кг TBsq FC",
+                                    type: "product", "name": "ЮП Кефир PL Лакомо 3.2% 1кг TBsq FC",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6432,7 +6513,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 806,
-                                    "name2": "ЮП Кефир Ополье 3.2% 0.87кг х20 ФП",
+                                    type: "product", "name": "ЮП Кефир Ополье 3.2% 0.87кг х20 ФП",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6445,16 +6526,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 807,
                     "name": "Кисломолочные Продукты",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 808,
                             "name": "Простокваша",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 809,
-                                    "name2": "Простокваша ДВД 3.2% 515г х12 СКСкК",
+                                    type: "product", "name": "Простокваша ДВД 3.2% 515г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6462,7 +6543,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 810,
-                                    "name2": "Простокваша Ополье 3.2% 0.5кг РР",
+                                    type: "product", "name": "Простокваша Ополье 3.2% 0.5кг РР",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6470,7 +6551,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 811,
-                                    "name2": "Простокваша 3,2% TBSg 0,5кг Русское молоко",
+                                    type: "product", "name": "Простокваша 3,2% TBSg 0,5кг Русское молоко",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6478,7 +6559,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 812,
-                                    "name2": "ЮП Простокваша Каждый день 3.2% 0.5кг РР",
+                                    type: "product", "name": "ЮП Простокваша Каждый день 3.2% 0.5кг РР",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6489,11 +6570,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 813,
                             "name": "Прочие",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 814,
-                                    "name2": "МКК Сыворот мол пастер Кунгурск 0.1% 0.976л ФП",
+                                    type: "product", "name": "МКК Сыворот мол пастер Кунгурск 0.1% 0.976л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6504,11 +6585,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 815,
                             "name": "Ряженка",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 816,
-                                    "name2": "Ряженка PL Романов луг 4% 0.5кг х12 TBsq FC",
+                                    type: "product", "name": "Ряженка PL Романов луг 4% 0.5кг х12 TBsq FC",
                                     "level4": "ЧАСТНАЯ МАРКА (РОМАНОВ ЛУГ)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6516,7 +6597,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 817,
-                                    "name2": "Ряженка ДВД 3.2% 950г х10 ТР",
+                                    type: "product", "name": "Ряженка ДВД 3.2% 950г х10 ТР",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6524,7 +6605,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 818,
-                                    "name2": "Ряженка Ополье 3.2% 1кг TBsqFC",
+                                    type: "product", "name": "Ряженка Ополье 3.2% 1кг TBsqFC",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6532,7 +6613,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 819,
-                                    "name2": "ЮП Ряженка PL Д 4% 0.5кг TBsq",
+                                    type: "product", "name": "ЮП Ряженка PL Д 4% 0.5кг TBsq",
                                     "level4": "ЧАСТНАЯ МАРКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6540,7 +6621,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 820,
-                                    "name2": "МКК Ряженка Кунгурский 4% 500г ФП",
+                                    type: "product", "name": "МКК Ряженка Кунгурский 4% 500г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6548,7 +6629,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 821,
-                                    "name2": "МКК Ряженка Кунгурский 4% 900г ПЭТ",
+                                    type: "product", "name": "МКК Ряженка Кунгурский 4% 900г ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6556,7 +6637,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 822,
-                                    "name2": "Ряженка ВесМол 2.5% 475г х10 ППак/ТР",
+                                    type: "product", "name": "Ряженка ВесМол 2.5% 475г х10 ППак/ТР",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6564,7 +6645,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 823,
-                                    "name2": "Ряженка ДВД 2.5% 475г х10 TРТвК",
+                                    type: "product", "name": "Ряженка ДВД 2.5% 475г х10 TРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6572,7 +6653,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 824,
-                                    "name2": "Ряженка ДВД 2.5% 950г х10 TРТвК",
+                                    type: "product", "name": "Ряженка ДВД 2.5% 950г х10 TРТвК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6580,7 +6661,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 825,
-                                    "name2": "Ряженка ДВД 3.2% 1000г х12 СКСкК",
+                                    type: "product", "name": "Ряженка ДВД 3.2% 1000г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6588,7 +6669,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 826,
-                                    "name2": "Ряженка ДВД 3.2% 475г х10 TР/ППакК",
+                                    type: "product", "name": "Ряженка ДВД 3.2% 475г х10 TР/ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6596,7 +6677,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 827,
-                                    "name2": "Ряженка ДВД 3.2% 515г х12 СКСкК",
+                                    type: "product", "name": "Ряженка ДВД 3.2% 515г х12 СКСкК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6604,7 +6685,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 828,
-                                    "name2": "Ряженка ДВД 4% 900г х6 ПЭТ",
+                                    type: "product", "name": "Ряженка ДВД 4% 900г х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6612,7 +6693,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 829,
-                                    "name2": "Ряженка Домик в дерене 4% 900г ПЭТ 6Х",
+                                    type: "product", "name": "Ряженка Домик в дерене 4% 900г ПЭТ 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6620,7 +6701,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 830,
-                                    "name2": "Ряженка Кунгурский 4% 190г МСТ 35Х",
+                                    type: "product", "name": "Ряженка Кунгурский 4% 190г МСТ 35Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -6628,7 +6709,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 831,
-                                    "name2": "Ряженка Ополье 3.2% 0.5кг TBsqFC",
+                                    type: "product", "name": "Ряженка Ополье 3.2% 0.5кг TBsqFC",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6636,7 +6717,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 832,
-                                    "name2": "Ряженка Ополье 3.2% 900г ПЭТ 6Х",
+                                    type: "product", "name": "Ряженка Ополье 3.2% 900г ПЭТ 6Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6644,7 +6725,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 833,
-                                    "name2": "Ряженка Отборн КубБуренка 4% 0.475кг х10 TР",
+                                    type: "product", "name": "Ряженка Отборн КубБуренка 4% 0.475кг х10 TР",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6652,7 +6733,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 834,
-                                    "name2": "Ряженка Отборн КубБуренка 4% 0.950кг х10 TР",
+                                    type: "product", "name": "Ряженка Отборн КубБуренка 4% 0.950кг х10 TР",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6660,7 +6741,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 835,
-                                    "name2": "ЮП Ряженка  4% 0.5кг РР Каждый день",
+                                    type: "product", "name": "ЮП Ряженка  4% 0.5кг РР Каждый день",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6668,7 +6749,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 836,
-                                    "name2": "ЮП Ряженка PL Billa 3.2% 0.5кг TBsqFC",
+                                    type: "product", "name": "ЮП Ряженка PL Billa 3.2% 0.5кг TBsqFC",
                                     "level4": "ЧАСТНАЯ МАРКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6676,7 +6757,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 837,
-                                    "name2": "ЮП Ряженка PL Лакомо 3.2% 0.5кг  TBsqFC",
+                                    type: "product", "name": "ЮП Ряженка PL Лакомо 3.2% 0.5кг  TBsqFC",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6684,7 +6765,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 838,
-                                    "name2": "ЮП Ряженка PL Лакомо 3.2% 1кг  TBsqFC",
+                                    type: "product", "name": "ЮП Ряженка PL Лакомо 3.2% 1кг  TBsqFC",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6692,7 +6773,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 839,
-                                    "name2": "ЮП Ряженка PL Русское молоко 3.2% 0.5кг TBsqFC",
+                                    type: "product", "name": "ЮП Ряженка PL Русское молоко 3.2% 0.5кг TBsqFC",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -6703,11 +6784,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 840,
                             "name": "Снежок",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 841,
-                                    "name2": "Напит к/м Снежок ВесМол 2.5% 475г PPкр 12Х",
+                                    type: "product", "name": "Напит к/м Снежок ВесМол 2.5% 475г PPкр 12Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6715,7 +6796,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 842,
-                                    "name2": "Прод кисмол ВесМол Снежок 2.5% 475г х10 Ппак/ТРТвК",
+                                    type: "product", "name": "Прод кисмол ВесМол Снежок 2.5% 475г х10 Ппак/ТРТвК",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6723,7 +6804,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 843,
-                                    "name2": "Прод кисмол ДВД Снежок 2.5% 475г х10 TРТвК/ППакК",
+                                    type: "product", "name": "Прод кисмол ДВД Снежок 2.5% 475г х10 TРТвК/ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6731,7 +6812,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 844,
-                                    "name2": "Продукт к/м Снежок ДвД 2.5% 475г РРкр 12Х",
+                                    type: "product", "name": "Продукт к/м Снежок ДвД 2.5% 475г РРкр 12Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6739,7 +6820,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 845,
-                                    "name2": "Продукт кисмол КубБуренка Снежок 2.5%475гх10 ТРТвК",
+                                    type: "product", "name": "Продукт кисмол КубБуренка Снежок 2.5%475гх10 ТРТвК",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6747,7 +6828,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 846,
-                                    "name2": "Снежок ВесМол 2.5% 475г PP с крышк 10Х",
+                                    type: "product", "name": "Снежок ВесМол 2.5% 475г PP с крышк 10Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6755,7 +6836,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 847,
-                                    "name2": "Снежок Ополье 2.5% 0.5кг х10 РР",
+                                    type: "product", "name": "Снежок Ополье 2.5% 0.5кг х10 РР",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6768,16 +6849,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 848,
                     "name": "Масло",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 849,
                             "name": "Масло Сливочное",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 850,
-                                    "name2": "Масло слив.Ополье 72.5% 0.2кг фольга",
+                                    type: "product", "name": "Масло слив.Ополье 72.5% 0.2кг фольга",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6785,7 +6866,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 851,
-                                    "name2": "Масло слад-слив несол Кунгурс 72.5%180г х40 КашФол",
+                                    type: "product", "name": "Масло слад-слив несол Кунгурс 72.5%180г х40 КашФол",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6793,7 +6874,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 852,
-                                    "name2": "Масло слив ДВД 72.5% 180г х20 КаширФол (120сут)",
+                                    type: "product", "name": "Масло слив ДВД 72.5% 180г х20 КаширФол (120сут)",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6801,7 +6882,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 853,
-                                    "name2": "Масло слив Каждый день 72.5% 200г х20 Кашир.фол",
+                                    type: "product", "name": "Масло слив Каждый день 72.5% 200г х20 Кашир.фол",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6809,7 +6890,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 854,
-                                    "name2": "Масло Слив Крестьян КубБуренка 72.5% 180г х20 ФОЛ",
+                                    type: "product", "name": "Масло Слив Крестьян КубБуренка 72.5% 180г х20 ФОЛ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6817,7 +6898,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 855,
-                                    "name2": "Масло слив.Ополье 72.5% 0.25кг каш.фольга",
+                                    type: "product", "name": "Масло слив.Ополье 72.5% 0.25кг каш.фольга",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6825,7 +6906,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 856,
-                                    "name2": "Масло слив.Ополье 72.5% 0.2кг каш.фольга",
+                                    type: "product", "name": "Масло слив.Ополье 72.5% 0.2кг каш.фольга",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6833,7 +6914,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 857,
-                                    "name2": "Масло сливоч ДВД 72.5% 180г КаширФол 10Х",
+                                    type: "product", "name": "Масло сливоч ДВД 72.5% 180г КаширФол 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6841,7 +6922,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 858,
-                                    "name2": "Масло сливочное ВесМол 72.5% 180г КаширФол 10Х",
+                                    type: "product", "name": "Масло сливочное ВесМол 72.5% 180г КаширФол 10Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6849,7 +6930,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 859,
-                                    "name2": "Масло Сливочное ВесМол 72.5% 180г х20 ФОЛ",
+                                    type: "product", "name": "Масло Сливочное ВесМол 72.5% 180г х20 ФОЛ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6857,7 +6938,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 860,
-                                    "name2": "Масло Сливочное ДВД 72.5% 180г х20 ФОЛ",
+                                    type: "product", "name": "Масло Сливочное ДВД 72.5% 180г х20 ФОЛ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6865,7 +6946,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 861,
-                                    "name2": "Масло сливочное ДВД 82.5% 180г КаширФол 10Х",
+                                    type: "product", "name": "Масло сливочное ДВД 82.5% 180г КаширФол 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6873,7 +6954,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 862,
-                                    "name2": "Масло Сливочное ДВД 82.5% 180г х20 ФОЛ",
+                                    type: "product", "name": "Масло Сливочное ДВД 82.5% 180г х20 ФОЛ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6881,7 +6962,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 863,
-                                    "name2": "Масло сливочное Ополье 82.5% 180г кашир.фольга 20Х",
+                                    type: "product", "name": "Масло сливочное Ополье 82.5% 180г кашир.фольга 20Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6889,7 +6970,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 864,
-                                    "name2": "Масло трад слад-слив несол Кунгур 82.5%180г КашФол",
+                                    type: "product", "name": "Масло трад слад-слив несол Кунгур 82.5%180г КашФол",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6897,7 +6978,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 865,
-                                    "name2": "МаслоСлив Каждый день 72.5% 180г КаширФольга 20Х",
+                                    type: "product", "name": "МаслоСлив Каждый день 72.5% 180г КаширФольга 20Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6905,7 +6986,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 866,
-                                    "name2": "МКК Масло крест.слив.Кунгурский 72.5% 180г Каш.фол",
+                                    type: "product", "name": "МКК Масло крест.слив.Кунгурский 72.5% 180г Каш.фол",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6913,7 +6994,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 867,
-                                    "name2": "МКК Масло слад-слив несол Кунгурс 82.5%180г КашФол",
+                                    type: "product", "name": "МКК Масло слад-слив несол Кунгурс 82.5%180г КашФол",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -6926,16 +7007,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 868,
                     "name": "Молоко",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 869,
                             "name": "Молоко Пастеризованное",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 870,
-                                    "name2": "ВесМол МолокоПастер 2.5% 800г ФП 12Х",
+                                    type: "product", "name": "ВесМол МолокоПастер 2.5% 800г ФП 12Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6943,7 +7024,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 871,
-                                    "name2": "Молоко Отборное пастер ВесМол 930мл х8 ПЭТ",
+                                    type: "product", "name": "Молоко Отборное пастер ВесМол 930мл х8 ПЭТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6951,7 +7032,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 872,
-                                    "name2": "Молоко отборное пастер Русское молоко 900мл х10 РР",
+                                    type: "product", "name": "Молоко отборное пастер Русское молоко 900мл х10 РР",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6959,7 +7040,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 873,
-                                    "name2": "Молоко пастер ВесМол 2.5% 900г х10 ПлФП",
+                                    type: "product", "name": "Молоко пастер ВесМол 2.5% 900г х10 ПлФП",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6967,7 +7048,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 874,
-                                    "name2": "Молоко пастер ВесМол 2.5% 930мл х8 ПЭТ",
+                                    type: "product", "name": "Молоко пастер ВесМол 2.5% 930мл х8 ПЭТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6975,7 +7056,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 875,
-                                    "name2": "Молоко пастер ВесМол 3.2% 950г х10 ППакК/ТРТвК",
+                                    type: "product", "name": "Молоко пастер ВесМол 3.2% 950г х10 ППакК/ТРТвК",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -6983,7 +7064,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 876,
-                                    "name2": "Молоко пастер ВесМолочн 3.2% 900г х12 ФП",
+                                    type: "product", "name": "Молоко пастер ВесМолочн 3.2% 900г х12 ФП",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -6991,7 +7072,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 877,
-                                    "name2": "Молоко пастер ДВД 2.5% 930мл х8 ПЭТ",
+                                    type: "product", "name": "Молоко пастер ДВД 2.5% 930мл х8 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -6999,7 +7080,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 878,
-                                    "name2": "Молоко пастер ДВД 3.2% 475г х10 ППакК",
+                                    type: "product", "name": "Молоко пастер ДВД 3.2% 475г х10 ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -7007,7 +7088,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 879,
-                                    "name2": "Молоко пастер ДВД 3.2% 950г х10 ППакК",
+                                    type: "product", "name": "Молоко пастер ДВД 3.2% 950г х10 ППакК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -7015,7 +7096,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 880,
-                                    "name2": "Молоко пастер Домик в деревне 6% 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко пастер Домик в деревне 6% 930мл х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7023,7 +7104,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 881,
-                                    "name2": "Молоко пастер КубБуренка 2.5% 900г х18 ПлФП",
+                                    type: "product", "name": "Молоко пастер КубБуренка 2.5% 900г х18 ПлФП",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7031,7 +7112,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 882,
-                                    "name2": "Молоко пастер Кунгурский 3,2% 0,9л ПЭТ",
+                                    type: "product", "name": "Молоко пастер Кунгурский 3,2% 0,9л ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7039,7 +7120,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 883,
-                                    "name2": "Молоко пастер отборн Кунгурский 3.7-4.5% 1л ФП",
+                                    type: "product", "name": "Молоко пастер отборн Кунгурский 3.7-4.5% 1л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7047,7 +7128,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 884,
-                                    "name2": "Молоко пастер Пермское 2.5% 0.876л ФП АКЦИЯ",
+                                    type: "product", "name": "Молоко пастер Пермское 2.5% 0.876л ФП АКЦИЯ",
                                     "level4": "БЕЗ ТОРГОВОЙ МАРКИ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7055,7 +7136,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 885,
-                                    "name2": "Молоко пастер. 2.5% 0,875л ФП",
+                                    type: "product", "name": "Молоко пастер. 2.5% 0,875л ФП",
                                     "level4": "БЕЗ ТОРГОВОЙ МАРКИ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7063,7 +7144,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 886,
-                                    "name2": "Молоко пастер. Пермское 3.2% 0,9л ФП",
+                                    type: "product", "name": "Молоко пастер. Пермское 3.2% 0,9л ФП",
                                     "level4": "БЕЗ ТОРГОВОЙ МАРКИ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7071,7 +7152,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 887,
-                                    "name2": "Молоко пастер.Кунгурский 2.5% 0,9л ПЭТ",
+                                    type: "product", "name": "Молоко пастер.Кунгурский 2.5% 0,9л ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7079,7 +7160,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 888,
-                                    "name2": "Молоко пастер.Кунгурский 3.2% 1л ФП ЦЕНА НИЖЕ",
+                                    type: "product", "name": "Молоко пастер.Кунгурский 3.2% 1л ФП ЦЕНА НИЖЕ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7087,7 +7168,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 889,
-                                    "name2": "Молоко Топл пастер ДВД 3.2% 950г х8 ПЭТ",
+                                    type: "product", "name": "Молоко Топл пастер ДВД 3.2% 950г х8 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7095,7 +7176,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 890,
-                                    "name2": "Молоко топлен Ополье 4% 1х12х1кг TBSq",
+                                    type: "product", "name": "Молоко топлен Ополье 4% 1х12х1кг TBSq",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -7103,7 +7184,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 891,
-                                    "name2": "СМЗ Молоко пастер Ополье 3.2% 0.5л ФП",
+                                    type: "product", "name": "СМЗ Молоко пастер Ополье 3.2% 0.5л ФП",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7111,7 +7192,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 892,
-                                    "name2": "СМЗ Молоко пастер Ополье 3.2% 1л ФП",
+                                    type: "product", "name": "СМЗ Молоко пастер Ополье 3.2% 1л ФП",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7119,7 +7200,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 893,
-                                    "name2": "ЮП Молоко топлен Ополье 4% 1л TBSq",
+                                    type: "product", "name": "ЮП Молоко топлен Ополье 4% 1л TBSq",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -7127,7 +7208,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 894,
-                                    "name2": "МКК Молоко паст отбор Кунгурск 3.7-4.5%0.876л Экол",
+                                    type: "product", "name": "МКК Молоко паст отбор Кунгурск 3.7-4.5%0.876л Экол",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "КУВШИН ПАУЧ-ПАК",
@@ -7135,7 +7216,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 895,
-                                    "name2": "МКК Молоко паст отборн Кунгурск 3.7-4.5%0.876л ПЭТ",
+                                    type: "product", "name": "МКК Молоко паст отборн Кунгурск 3.7-4.5%0.876л ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7143,7 +7224,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 896,
-                                    "name2": "МКК Молоко пастер 2.5% 0,85л ФП АКЦИЯ 20Х",
+                                    type: "product", "name": "МКК Молоко пастер 2.5% 0,85л ФП АКЦИЯ 20Х",
                                     "level4": "БЕЗ ТОРГОВОЙ МАРКИ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7151,7 +7232,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 897,
-                                    "name2": "МКК Молоко пастер Кунгурск 2.5% 0,9л ФП 20Х",
+                                    type: "product", "name": "МКК Молоко пастер Кунгурск 2.5% 0,9л ФП 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7159,7 +7240,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 898,
-                                    "name2": "МКК Молоко пастер Кунгурск 3.2% 0,9л ФП 20Х",
+                                    type: "product", "name": "МКК Молоко пастер Кунгурск 3.2% 0,9л ФП 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7167,7 +7248,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 899,
-                                    "name2": "МКК Молоко пастер Кунгурский 2.5% 0.875л Эколин",
+                                    type: "product", "name": "МКК Молоко пастер Кунгурский 2.5% 0.875л Эколин",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "КУВШИН ПАУЧ-ПАК",
@@ -7175,7 +7256,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 900,
-                                    "name2": "МКК Молоко пастер. 2.5% 0,827л ФП 20Х",
+                                    type: "product", "name": "МКК Молоко пастер. 2.5% 0,827л ФП 20Х",
                                     "level4": "БЕЗ ТОРГОВОЙ МАРКИ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7183,7 +7264,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 901,
-                                    "name2": "МКК Молоко пастер. 2.5% 0,827л ФП АКЦИЯ 20Х",
+                                    type: "product", "name": "МКК Молоко пастер. 2.5% 0,827л ФП АКЦИЯ 20Х",
                                     "level4": "БЕЗ ТОРГОВОЙ МАРКИ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7191,7 +7272,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 902,
-                                    "name2": "МКК Молоко пастер. 2.5% 0,875л ФП АКЦИЯ",
+                                    type: "product", "name": "МКК Молоко пастер. 2.5% 0,875л ФП АКЦИЯ",
                                     "level4": "БЕЗ ТОРГОВОЙ МАРКИ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7199,7 +7280,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 903,
-                                    "name2": "МКК Молоко пастер.Кунгурский 1.5% 0,875 л ФП 20Х",
+                                    type: "product", "name": "МКК Молоко пастер.Кунгурский 1.5% 0,875 л ФП 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7207,7 +7288,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 904,
-                                    "name2": "МКК Молоко пастер.Кунгурский 2.5% 0,875л х12 ПЭТ",
+                                    type: "product", "name": "МКК Молоко пастер.Кунгурский 2.5% 0,875л х12 ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7215,7 +7296,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 905,
-                                    "name2": "МКК Молоко пастер.Кунгурский 2.5% 0.5л ФП",
+                                    type: "product", "name": "МКК Молоко пастер.Кунгурский 2.5% 0.5л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7223,7 +7304,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 906,
-                                    "name2": "МКК Молоко пастер.Кунгурский 2.5% 1л ФП",
+                                    type: "product", "name": "МКК Молоко пастер.Кунгурский 2.5% 1л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7231,7 +7312,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 907,
-                                    "name2": "МКК Молоко пастер.Кунгурский 3.2% 0.5л ФП",
+                                    type: "product", "name": "МКК Молоко пастер.Кунгурский 3.2% 0.5л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7239,7 +7320,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 908,
-                                    "name2": "МКК Молоко пастер.Кунгурский 3.2% 1л ФП",
+                                    type: "product", "name": "МКК Молоко пастер.Кунгурский 3.2% 1л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7247,7 +7328,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 909,
-                                    "name2": "МКК Молоко топленое Кунгурский 4% 0.5л ФП",
+                                    type: "product", "name": "МКК Молоко топленое Кунгурский 4% 0.5л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7255,7 +7336,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 910,
-                                    "name2": "МКК Молоко топленое Кунгурский 4% 0.876л ПЭТ",
+                                    type: "product", "name": "МКК Молоко топленое Кунгурский 4% 0.876л ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7263,7 +7344,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 911,
-                                    "name2": "МКК Молоко топленое Кунгурский 4% 0.9л ПЭТ",
+                                    type: "product", "name": "МКК Молоко топленое Кунгурский 4% 0.9л ПЭТ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7271,7 +7352,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 912,
-                                    "name2": "Молоко 2,5% ПЭТ 930мл Ополье",
+                                    type: "product", "name": "Молоко 2,5% ПЭТ 930мл Ополье",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7279,7 +7360,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 913,
-                                    "name2": "Молоко Отборное Billa 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко Отборное Billa 930мл х6 ПЭТ",
                                     "level4": "ЧАСТНАЯ МАРКА (БИЛЛА)",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7287,7 +7368,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 914,
-                                    "name2": "Молоко Отборное Ополье 1х8х930мл ПЭТ",
+                                    type: "product", "name": "Молоко Отборное Ополье 1х8х930мл ПЭТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7295,7 +7376,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 915,
-                                    "name2": "Молоко Отборное пастер ВесМол 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко Отборное пастер ВесМол 930мл х6 ПЭТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7303,7 +7384,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 916,
-                                    "name2": "Молоко Отборное пастер ДВД 1400мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко Отборное пастер ДВД 1400мл х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7311,7 +7392,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 917,
-                                    "name2": "Молоко Отборное пастер ДВД 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко Отборное пастер ДВД 930мл х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7319,7 +7400,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 918,
-                                    "name2": "Молоко Отборное пастер ДВД 930мл х6 ПЭТ КЗ",
+                                    type: "product", "name": "Молоко Отборное пастер ДВД 930мл х6 ПЭТ КЗ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7327,7 +7408,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 919,
-                                    "name2": "Молоко Отборное пастер КубБуренка 1400мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко Отборное пастер КубБуренка 1400мл х6 ПЭТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7335,7 +7416,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 920,
-                                    "name2": "Молоко Отборное пастер КубБуренка 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко Отборное пастер КубБуренка 930мл х6 ПЭТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7343,7 +7424,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 921,
-                                    "name2": "Молоко пастер ВесМол 2.5% 1л х10 ППак",
+                                    type: "product", "name": "Молоко пастер ВесМол 2.5% 1л х10 ППак",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -7351,7 +7432,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 922,
-                                    "name2": "Молоко пастер ВесМол 2.5% 800г ФП 10Х",
+                                    type: "product", "name": "Молоко пастер ВесМол 2.5% 800г ФП 10Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7359,7 +7440,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 923,
-                                    "name2": "Молоко пастер ВесМол 2.5% 900г х12 ПлФП",
+                                    type: "product", "name": "Молоко пастер ВесМол 2.5% 900г х12 ПлФП",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7367,7 +7448,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 924,
-                                    "name2": "Молоко пастер ВесМол 2.5% 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко пастер ВесМол 2.5% 930мл х6 ПЭТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7375,7 +7456,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 925,
-                                    "name2": "Молоко пастер ВесМол 2.5% 950г х10 ППакК/ТРТвК",
+                                    type: "product", "name": "Молоко пастер ВесМол 2.5% 950г х10 ППакК/ТРТвК",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -7383,7 +7464,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 926,
-                                    "name2": "Молоко пастер ВесМол 3.2% 900г х12 ПлФП",
+                                    type: "product", "name": "Молоко пастер ВесМол 3.2% 900г х12 ПлФП",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7391,7 +7472,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 927,
-                                    "name2": "Молоко пастер ДВД 2.5% 1400мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко пастер ДВД 2.5% 1400мл х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7399,7 +7480,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 928,
-                                    "name2": "Молоко пастер ДВД 2.5% 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко пастер ДВД 2.5% 930мл х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7407,7 +7488,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 929,
-                                    "name2": "Молоко пастер ДВД 2.5% 930мл х6 ПЭТ КЗ",
+                                    type: "product", "name": "Молоко пастер ДВД 2.5% 930мл х6 ПЭТ КЗ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7415,7 +7496,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 930,
-                                    "name2": "Молоко пастер Домик в дерев 2.5% 950г х10 РР",
+                                    type: "product", "name": "Молоко пастер Домик в дерев 2.5% 950г х10 РР",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -7423,7 +7504,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 931,
-                                    "name2": "Молоко пастер Домик в деревне 2.5% 1400мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко пастер Домик в деревне 2.5% 1400мл х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7431,7 +7512,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 932,
-                                    "name2": "Молоко пастер Домик в деревне 6% 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко пастер Домик в деревне 6% 930мл х6 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7439,7 +7520,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 933,
-                                    "name2": "Молоко пастер Кубанская Буренка 2.5% 800г ФП 12Х",
+                                    type: "product", "name": "Молоко пастер Кубанская Буренка 2.5% 800г ФП 12Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7447,7 +7528,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 934,
-                                    "name2": "Молоко пастер КубанскБуренка 2.5% 900г х12 ФП ГОФР",
+                                    type: "product", "name": "Молоко пастер КубанскБуренка 2.5% 900г х12 ФП ГОФР",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7455,7 +7536,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 935,
-                                    "name2": "Молоко пастер КубБуренка 2.5% 1400мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко пастер КубБуренка 2.5% 1400мл х6 ПЭТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7463,7 +7544,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 936,
-                                    "name2": "Молоко пастер КубБуренка 2.5% 930мл ПЭТ 6X",
+                                    type: "product", "name": "Молоко пастер КубБуренка 2.5% 930мл ПЭТ 6X",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7471,7 +7552,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 937,
-                                    "name2": "Молоко пастер КубБуренка 2.5% 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко пастер КубБуренка 2.5% 930мл х6 ПЭТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7479,7 +7560,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 938,
-                                    "name2": "Молоко пастер Ополье 3.2% 1х20х0.5кг ФП",
+                                    type: "product", "name": "Молоко пастер Ополье 3.2% 1х20х0.5кг ФП",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7487,7 +7568,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 939,
-                                    "name2": "Молоко Пастер Отборное Станция Молоч 930мл ПЭТ 6Х",
+                                    type: "product", "name": "Молоко Пастер Отборное Станция Молоч 930мл ПЭТ 6Х",
                                     "level4": "ЧАСТНАЯ МАРКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7495,7 +7576,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 940,
-                                    "name2": "Молоко пастериз Русское молоко 3.2% 900мл х10 РР",
+                                    type: "product", "name": "Молоко пастериз Русское молоко 3.2% 900мл х10 РР",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -7503,7 +7584,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 941,
-                                    "name2": "Молоко пастериз Станция Молочная 2,5% 930мл ПЭТ 6Х",
+                                    type: "product", "name": "Молоко пастериз Станция Молочная 2,5% 930мл ПЭТ 6Х",
                                     "level4": "ЧАСТНАЯ МАРКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7511,7 +7592,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 942,
-                                    "name2": "Молоко пастеризованное \"Billa\" 2,5% ПЭТ 930мл",
+                                    type: "product", "name": "Молоко пастеризованное \"Billa\" 2,5% ПЭТ 930мл",
                                     "level4": "ЧАСТНАЯ МАРКА (БИЛЛА)",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7519,7 +7600,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 943,
-                                    "name2": "Молоко Топл пастер ДВД 3.2% 950г ПЭТ",
+                                    type: "product", "name": "Молоко Топл пастер ДВД 3.2% 950г ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7527,7 +7608,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 944,
-                                    "name2": "Молоко Топл пастер КубБуренка 3.2% 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко Топл пастер КубБуренка 3.2% 930мл х6 ПЭТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7535,7 +7616,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 945,
-                                    "name2": "Молоко топленое Ополье 3.2% 930мл х6 ПЭТ",
+                                    type: "product", "name": "Молоко топленое Ополье 3.2% 930мл х6 ПЭТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7543,7 +7624,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 946,
-                                    "name2": "ЮП Молоко Отборное TBSq 1л Лакомо",
+                                    type: "product", "name": "ЮП Молоко Отборное TBSq 1л Лакомо",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -7551,7 +7632,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 947,
-                                    "name2": "ЮП Молоко паст.Отборное Ополье 3.5-3.6% 1л TBsqFС",
+                                    type: "product", "name": "ЮП Молоко паст.Отборное Ополье 3.5-3.6% 1л TBsqFС",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -7559,7 +7640,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 948,
-                                    "name2": "ЮП Молоко пастер Ополье 3.2% 0.43л х20 ФинПак",
+                                    type: "product", "name": "ЮП Молоко пастер Ополье 3.2% 0.43л х20 ФинПак",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7567,7 +7648,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 949,
-                                    "name2": "ЮП Молоко пастер Ополье 3.2% 0.87л x20 ФинПак",
+                                    type: "product", "name": "ЮП Молоко пастер Ополье 3.2% 0.87л x20 ФинПак",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7575,7 +7656,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 950,
-                                    "name2": "ЮП Молоко пастер Ополье 3.2% 1кг  ФП",
+                                    type: "product", "name": "ЮП Молоко пастер Ополье 3.2% 1кг  ФП",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -7586,11 +7667,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 951,
                             "name": "Молоко Стерилизованное",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 952,
-                                    "name2": "Кокт Мол стерил ДВД Лес Яг 1.5% 950мл х12 TEA",
+                                    type: "product", "name": "Кокт Мол стерил ДВД Лес Яг 1.5% 950мл х12 TEA",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "ТЕТРА ЭВЕРО АСЕПТИК",
@@ -7598,7 +7679,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 953,
-                                    "name2": "Кокт Мол стерил ДВД Малина 1.5% 950мл х12 TEA",
+                                    type: "product", "name": "Кокт Мол стерил ДВД Малина 1.5% 950мл х12 TEA",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "МАЛИНА",
                                     "level6": "ТЕТРА ЭВЕРО АСЕПТИК",
@@ -7606,7 +7687,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 954,
-                                    "name2": "Молоко Отборное ультрап ДВД 950мл х12 ТЕА",
+                                    type: "product", "name": "Молоко Отборное ультрап ДВД 950мл х12 ТЕА",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ЭВЕРО АСЕПТИК",
@@ -7614,7 +7695,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 955,
-                                    "name2": "Молоко Отборное ультрап ДВД 950мл х12 ТЕА",
+                                    type: "product", "name": "Молоко Отборное ультрап ДВД 950мл х12 ТЕА",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ЭВЕРО АСЕПТИК",
@@ -7622,7 +7703,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 956,
-                                    "name2": "Молоко стер Дом в дер 3.2% 1х12х950г TBA 9 мес",
+                                    type: "product", "name": "Молоко стер Дом в дер 3.2% 1х12х950г TBA 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7630,7 +7711,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 957,
-                                    "name2": "Молоко ультрап 33 Коровы 2.5% 950г х12 БЗ",
+                                    type: "product", "name": "Молоко ультрап 33 Коровы 2.5% 950г х12 БЗ",
                                     "level4": "33 КОРОВЫ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7638,7 +7719,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 958,
-                                    "name2": "Молоко ультрап 33 Коровы 2.5% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап 33 Коровы 2.5% 950г х12 БЗ 9 мес",
                                     "level4": "33 КОРОВЫ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7646,7 +7727,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 959,
-                                    "name2": "Молоко ультрап 33 Коровы 3.2% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап 33 Коровы 3.2% 950г х12 БЗ 9 мес",
                                     "level4": "33 КОРОВЫ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7654,7 +7735,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 960,
-                                    "name2": "Молоко ультрап Веселый молочник 3.2% 1х12х1л соц.к",
+                                    type: "product", "name": "Молоко ультрап Веселый молочник 3.2% 1х12х1л соц.к",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7662,7 +7743,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 961,
-                                    "name2": "Молоко ультрап ВесМол 2.5% 950г х12 ТБА",
+                                    type: "product", "name": "Молоко ультрап ВесМол 2.5% 950г х12 ТБА",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7670,7 +7751,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 962,
-                                    "name2": "Молоко ультрап ВесМол 3.2% 1000г х12 БЗ",
+                                    type: "product", "name": "Молоко ультрап ВесМол 3.2% 1000г х12 БЗ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7678,7 +7759,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 963,
-                                    "name2": "Молоко ультрап ВесМол 3.2% 950г х12 ТБА",
+                                    type: "product", "name": "Молоко ультрап ВесМол 3.2% 950г х12 ТБА",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7686,7 +7767,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 964,
-                                    "name2": "Молоко ультрап ДВД 0.5% 950г х12 СЛ",
+                                    type: "product", "name": "Молоко ультрап ДВД 0.5% 950г х12 СЛ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7694,7 +7775,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 965,
-                                    "name2": "Молоко ультрап ДВД 0.5% 950г х12 СЛ НД",
+                                    type: "product", "name": "Молоко ультрап ДВД 0.5% 950г х12 СЛ НД",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7702,7 +7783,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 966,
-                                    "name2": "Молоко ультрап ДВД 0.5% 950мл х12 ТЕА",
+                                    type: "product", "name": "Молоко ультрап ДВД 0.5% 950мл х12 ТЕА",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ЭВЕРО АСЕПТИК",
@@ -7710,7 +7791,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 967,
-                                    "name2": "Молоко ультрап ДВД 0.5% 950мл х12 ТЕА 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 0.5% 950мл х12 ТЕА 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ЭВЕРО АСЕПТИК",
@@ -7718,7 +7799,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 968,
-                                    "name2": "Молоко ультрап ДВД 1.5% 950г х12 СЛ НД",
+                                    type: "product", "name": "Молоко ультрап ДВД 1.5% 950г х12 СЛ НД",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7726,7 +7807,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 969,
-                                    "name2": "Молоко ультрап ДВД 2.5% 1450г х8 СЛ",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 1450г х8 СЛ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7734,7 +7815,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 970,
-                                    "name2": "Молоко ультрап ДВД 2.5% 900г х12 ТФА",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 900г х12 ТФА",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -7742,7 +7823,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 971,
-                                    "name2": "Молоко ультрап ДВД 2.5% 950г х12 СЛ",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 950г х12 СЛ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7750,7 +7831,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 972,
-                                    "name2": "Молоко ультрап ДВД 2.5% 950г х12 СЛ НД",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 950г х12 СЛ НД",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7758,7 +7839,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 973,
-                                    "name2": "Молоко ультрап ДВД 2.5% 950мл х12 ТЕА",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 950мл х12 ТЕА",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ЭВЕРО АСЕПТИК",
@@ -7766,7 +7847,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 974,
-                                    "name2": "Молоко ультрап ДВД 2.5% 950мл х12 ТЕА 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 950мл х12 ТЕА 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ЭВЕРО АСЕПТИК",
@@ -7774,7 +7855,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 975,
-                                    "name2": "Молоко ультрап ДВД 3.2% 1450г х8 СЛ",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 1450г х8 СЛ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7782,7 +7863,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 976,
-                                    "name2": "Молоко ультрап ДВД 3.2% 1450г х8 СЛ НД",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 1450г х8 СЛ НД",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7790,7 +7871,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 977,
-                                    "name2": "Молоко ультрап ДВД 3.2% 900г х12 ТФА",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 900г х12 ТФА",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -7798,7 +7879,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 978,
-                                    "name2": "Молоко ультрап ДвД 3.2% 950г х12 TBA HeliCap 6мес",
+                                    type: "product", "name": "Молоко ультрап ДвД 3.2% 950г х12 TBA HeliCap 6мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7806,7 +7887,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 979,
-                                    "name2": "Молоко ультрап ДВД 3.2% 950г х12 СЛ НД",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 950г х12 СЛ НД",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7814,7 +7895,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 980,
-                                    "name2": "Молоко ультрап ДВД 3.2% 950г х12 СЛХК 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 950г х12 СЛХК 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7822,7 +7903,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 981,
-                                    "name2": "Молоко ультрап ДВД 3.2% 950г х12 ТБА",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 950г х12 ТБА",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7830,7 +7911,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 982,
-                                    "name2": "Молоко ультрап ДвД 3.2% для Капуч 950г TBAB 9м 12Х",
+                                    type: "product", "name": "Молоко ультрап ДвД 3.2% для Капуч 950г TBAB 9м 12Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7838,7 +7919,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 983,
-                                    "name2": "Молоко ультрап ДВД 3.5% 200мл х18 БЗ",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.5% 200мл х18 БЗ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7846,7 +7927,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 984,
-                                    "name2": "Молоко ультрап ДВД 3.5% 950г х12 СЛ НД",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.5% 950г х12 СЛ НД",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7854,7 +7935,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 985,
-                                    "name2": "Молоко ультрап ДВД 6% 950г х12 СЛ НД",
+                                    type: "product", "name": "Молоко ультрап ДВД 6% 950г х12 СЛ НД",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -7862,7 +7943,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 986,
-                                    "name2": "Молоко ультрап КубБуренка 0.5% 1кг х12 БЗ 9мес",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 0.5% 1кг х12 БЗ 9мес",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7870,7 +7951,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 987,
-                                    "name2": "Молоко ультрап КубБуренка 1.5% 1кг х12 БЗ 9мес",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 1.5% 1кг х12 БЗ 9мес",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7878,7 +7959,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 988,
-                                    "name2": "Молоко ультрап КубБуренка 2.5% 1450г х8 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 2.5% 1450г х8 СЛ 9 мес",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7886,7 +7967,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 989,
-                                    "name2": "Молоко ультрап КубБуренка 2.5% 1кг х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 2.5% 1кг х12 БЗ 9 мес",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7894,7 +7975,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 990,
-                                    "name2": "Молоко ультрап КубБуренка 3.2% 1450г х8 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 3.2% 1450г х8 СЛ 9 мес",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7902,7 +7983,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 991,
-                                    "name2": "Молоко ультрап КубБуренка 3.5% 0.2л х18 БЗ",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 3.5% 0.2л х18 БЗ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7910,7 +7991,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 992,
-                                    "name2": "Молоко ультрап КубБуренка 6% 1кг х12 БЗ",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 6% 1кг х12 БЗ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7918,7 +7999,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 993,
-                                    "name2": "Молоко ультрап М 1.5% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап М 1.5% 950г х12 БЗ 9 мес",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7926,7 +8007,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 994,
-                                    "name2": "Молоко ультрап М 2.5% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап М 2.5% 950г х12 БЗ 9 мес",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7934,7 +8015,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 995,
-                                    "name2": "Молоко ультрап М 3.2% 1450г х8 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап М 3.2% 1450г х8 СЛ 9 мес",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -7942,7 +8023,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 996,
-                                    "name2": "Молоко ультрап М 3.2% 900г х12 ТФА",
+                                    type: "product", "name": "Молоко ультрап М 3.2% 900г х12 ТФА",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -7950,7 +8031,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 997,
-                                    "name2": "Молоко ультрап М 3.2% 950г х12 СЛ без крыш",
+                                    type: "product", "name": "Молоко ультрап М 3.2% 950г х12 СЛ без крыш",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7958,7 +8039,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 998,
-                                    "name2": "Молоко ультрап Пастушок 3.2% 950г х12 БЗ",
+                                    type: "product", "name": "Молоко ультрап Пастушок 3.2% 950г х12 БЗ",
                                     "level4": "ПАСТУШОК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7966,7 +8047,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 999,
-                                    "name2": "Молоко ультрап Пастушок 3.2% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап Пастушок 3.2% 950г х12 БЗ 9 мес",
                                     "level4": "ПАСТУШОК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7974,7 +8055,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1000,
-                                    "name2": "Молоко ультрапаст 33 коровы 3.2% 950г х12 TBABase",
+                                    type: "product", "name": "Молоко ультрапаст 33 коровы 3.2% 950г х12 TBABase",
                                     "level4": "33 КОРОВЫ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7982,7 +8063,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1001,
-                                    "name2": "ПМ Молоко стер.3.2% 1л Кажд день ТВАВ",
+                                    type: "product", "name": "ПМ Молоко стер.3.2% 1л Кажд день ТВАВ",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -7990,7 +8071,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1002,
-                                    "name2": "Молоко стер Ополье 3.2% 1л TBAB",
+                                    type: "product", "name": "Молоко стер Ополье 3.2% 1л TBAB",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -7998,7 +8079,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1003,
-                                    "name2": "Молоко стер. Ополье 1.5% 1л TBA с крыш",
+                                    type: "product", "name": "Молоко стер. Ополье 1.5% 1л TBA с крыш",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -8006,7 +8087,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1004,
-                                    "name2": "Молоко стер. Ополье 2.5% 1х12х1л TBABRC",
+                                    type: "product", "name": "Молоко стер. Ополье 2.5% 1х12х1л TBABRC",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -8014,7 +8095,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1005,
-                                    "name2": "Молоко стер.топленое PL Каждый день 3,2% 1л ТВА",
+                                    type: "product", "name": "Молоко стер.топленое PL Каждый день 3,2% 1л ТВА",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8022,7 +8103,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1006,
-                                    "name2": "Молоко стерил Ополье 3.2% 1х12х1л TBAB с кр",
+                                    type: "product", "name": "Молоко стерил Ополье 3.2% 1х12х1л TBAB с кр",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -8030,7 +8111,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1007,
-                                    "name2": "Молоко ультрап ВесМол 2.5% 1000г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ВесМол 2.5% 1000г х12 БЗ 9 мес",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8038,7 +8119,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1008,
-                                    "name2": "Молоко ультрап ВесМол 2.5% 1450г х8 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ВесМол 2.5% 1450г х8 СЛ 9 мес",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8046,7 +8127,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1009,
-                                    "name2": "Молоко ультрап ВесМол 2.5% 1кг х12 БЗ",
+                                    type: "product", "name": "Молоко ультрап ВесМол 2.5% 1кг х12 БЗ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8054,7 +8135,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1010,
-                                    "name2": "Молоко ультрап ВесМол 2.5% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ВесМол 2.5% 950г х12 БЗ 9 мес",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8062,7 +8143,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1011,
-                                    "name2": "Молоко ультрап ВесМол 3.2% 1000г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ВесМол 3.2% 1000г х12 БЗ 9 мес",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8070,7 +8151,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1012,
-                                    "name2": "Молоко ультрап ВесМол 3.2% 1450г х8 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ВесМол 3.2% 1450г х8 СЛ 9 мес",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8078,7 +8159,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1013,
-                                    "name2": "Молоко ультрап ВесМол 3.2% 1л х12 БЗ Соц канал",
+                                    type: "product", "name": "Молоко ультрап ВесМол 3.2% 1л х12 БЗ Соц канал",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8086,7 +8167,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1014,
-                                    "name2": "Молоко ультрап ВесМол 3.2% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ВесМол 3.2% 950г х12 БЗ 9 мес",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8094,7 +8175,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1015,
-                                    "name2": "Молоко ультрап ВМ 2.5% 950г х12 TBAS БЕЗ КРЫШ 9м",
+                                    type: "product", "name": "Молоко ультрап ВМ 2.5% 950г х12 TBAS БЕЗ КРЫШ 9м",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8102,7 +8183,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1016,
-                                    "name2": "Молоко ультрап ДВД 0.5% 950г х12 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 0.5% 950г х12 СЛ 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8110,7 +8191,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1017,
-                                    "name2": "Молоко ультрап ДВД 0.5% 950г х12 СЛХК 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 0.5% 950г х12 СЛХК 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8118,7 +8199,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1018,
-                                    "name2": "Молоко ультрап ДВД 1.5% 950г х12 СЛХК 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 1.5% 950г х12 СЛХК 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8126,7 +8207,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1019,
-                                    "name2": "Молоко ультрап ДВД 2.5% 1450г х8 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 1450г х8 СЛ 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8134,7 +8215,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1020,
-                                    "name2": "Молоко ультрап ДВД 2.5% 900г х12 ТФА 4 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 900г х12 ТФА 4 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -8142,7 +8223,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1021,
-                                    "name2": "Молоко ультрап ДВД 2.5% 950г TBA HeliCap 9мес 12Х",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 950г TBA HeliCap 9мес 12Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8150,7 +8231,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1022,
-                                    "name2": "Молоко ультрап ДВД 2.5% 950г х12 СЛХК 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 950г х12 СЛХК 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8158,7 +8239,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1023,
-                                    "name2": "Молоко ультрап ДВД 2.5% 950г х12 ТВАSl рекап 9мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5% 950г х12 ТВАSl рекап 9мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8166,7 +8247,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1024,
-                                    "name2": "Молоко ультрап ДВД 2.5%900г х12 ТФА 3 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 2.5%900г х12 ТФА 3 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -8174,7 +8255,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1025,
-                                    "name2": "Молоко ультрап ДВД 3.2% 1450г х8 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 1450г х8 СЛ 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8182,7 +8263,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1026,
-                                    "name2": "Молоко ультрап ДВД 3.2% 500г х15 СЛРК",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 500г х15 СЛРК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8190,7 +8271,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1027,
-                                    "name2": "Молоко ультрап ДВД 3.2% 900г х12 ТФА 3 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 900г х12 ТФА 3 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -8198,7 +8279,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1028,
-                                    "name2": "Молоко ультрап ДВД 3.2% 900г х12 ТФА 4 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 900г х12 ТФА 4 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -8206,7 +8287,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1029,
-                                    "name2": "Молоко ультрап ДВД 3.2% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 950г х12 БЗ 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8214,7 +8295,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1030,
-                                    "name2": "Молоко ультрап ДВД 3.2% 950г х12 БЗ для Капучино",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 950г х12 БЗ для Капучино",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8222,7 +8303,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1031,
-                                    "name2": "Молоко ультрап ДВД 3.2% 950г х12 СЛХК 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2% 950г х12 СЛХК 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8230,7 +8311,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1032,
-                                    "name2": "Молоко ультрап ДВД 3.2%950г х12 СЛ 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.2%950г х12 СЛ 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8238,7 +8319,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1033,
-                                    "name2": "Молоко ультрап ДвД 3.5% 200мл х18 ТВАB",
+                                    type: "product", "name": "Молоко ультрап ДвД 3.5% 200мл х18 ТВАB",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8246,7 +8327,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1034,
-                                    "name2": "Молоко ультрап ДВД 3.5% 950г х12 СЛХК 9 мес",
+                                    type: "product", "name": "Молоко ультрап ДВД 3.5% 950г х12 СЛХК 9 мес",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8254,7 +8335,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1035,
-                                    "name2": "Молоко ультрап ДВД 6% 950г х12 СЛХК",
+                                    type: "product", "name": "Молоко ультрап ДВД 6% 950г х12 СЛХК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8262,7 +8343,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1036,
-                                    "name2": "Молоко ультрап КубБур 0.5% 950г х12 TBASlHC",
+                                    type: "product", "name": "Молоко ультрап КубБур 0.5% 950г х12 TBASlHC",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8270,7 +8351,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1037,
-                                    "name2": "Молоко ультрап КубБуренка 2.5% 1кг х12 БЗ",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 2.5% 1кг х12 БЗ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8278,7 +8359,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1038,
-                                    "name2": "Молоко ультрап КубБуренка 3.5% 1кг х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап КубБуренка 3.5% 1кг х12 БЗ 9 мес",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8286,7 +8367,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1039,
-                                    "name2": "Молоко ультрап М 2.5% 900г х12 ТФА 3мес",
+                                    type: "product", "name": "Молоко ультрап М 2.5% 900г х12 ТФА 3мес",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -8294,7 +8375,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1040,
-                                    "name2": "Молоко ультрап М 2.5% 900г х12 ТФА 4 мес",
+                                    type: "product", "name": "Молоко ультрап М 2.5% 900г х12 ТФА 4 мес",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -8302,7 +8383,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1041,
-                                    "name2": "Молоко ультрап М 3.2% 900г х12 ТФА 3мес",
+                                    type: "product", "name": "Молоко ультрап М 3.2% 900г х12 ТФА 3мес",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -8310,7 +8391,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1042,
-                                    "name2": "Молоко ультрап М 3.2% 900г х12 ТФА 4 мес",
+                                    type: "product", "name": "Молоко ультрап М 3.2% 900г х12 ТФА 4 мес",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ФИНО АСЕПТИК",
@@ -8318,7 +8399,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1043,
-                                    "name2": "Молоко ультрап М 3.2% 950г х12 БЗ",
+                                    type: "product", "name": "Молоко ультрап М 3.2% 950г х12 БЗ",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8326,7 +8407,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1044,
-                                    "name2": "Молоко ультрап М 3.2% 950г х12 БЗ 9 мес",
+                                    type: "product", "name": "Молоко ультрап М 3.2% 950г х12 БЗ 9 мес",
                                     "level4": "М",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8334,7 +8415,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1045,
-                                    "name2": "Молоко ультрап Топленое ДВД 3.2% 950г х12 ТБА",
+                                    type: "product", "name": "Молоко ультрап Топленое ДВД 3.2% 950г х12 ТБА",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8342,7 +8423,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1046,
-                                    "name2": "Молоко ультрап ЧудоДетки Обог 3.2% 200мл х18 БЗ ДП",
+                                    type: "product", "name": "Молоко ультрап ЧудоДетки Обог 3.2% 200мл х18 БЗ ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8350,7 +8431,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1047,
-                                    "name2": "Молоко ультрапаст КубБур 1.5% 950г х12 TBASlHC",
+                                    type: "product", "name": "Молоко ультрапаст КубБур 1.5% 950г х12 TBASlHC",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8358,7 +8439,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1048,
-                                    "name2": "Молоко ультрапаст КубБур 2.5% 950г х12 TBASlHC",
+                                    type: "product", "name": "Молоко ультрапаст КубБур 2.5% 950г х12 TBASlHC",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8366,7 +8447,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1049,
-                                    "name2": "Молоко ультрапаст КубБур 3.5% 950г x12 ТВАSlHC",
+                                    type: "product", "name": "Молоко ультрапаст КубБур 3.5% 950г x12 ТВАSlHC",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8374,7 +8455,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1050,
-                                    "name2": "Молоко ультрапаст КубБур 6% 950г х12 ТВАSlHC",
+                                    type: "product", "name": "Молоко ультрапаст КубБур 6% 950г х12 ТВАSlHC",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СЛИМ",
@@ -8382,7 +8463,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1051,
-                                    "name2": "ЮП Молоко стер. PL Лакомо 1.5% 1л TBABRC",
+                                    type: "product", "name": "ЮП Молоко стер. PL Лакомо 1.5% 1л TBABRC",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8390,7 +8471,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1052,
-                                    "name2": "ЮП Молоко стер. PL Лакомо 3.2% 1л TBABRC",
+                                    type: "product", "name": "ЮП Молоко стер. PL Лакомо 3.2% 1л TBABRC",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК БЕЙЗ",
@@ -8401,11 +8482,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1053,
                             "name": "Прочие",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1054,
-                                    "name2": "МКК Сыворот.мол.пастер Кунгурск 0.1% 1л ФП",
+                                    type: "product", "name": "МКК Сыворот.мол.пастер Кунгурск 0.1% 1л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -8418,16 +8499,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 1055,
                     "name": "Прочие Молочные Десерты",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 1056,
                             "name": "Глазированные Сырки",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1057,
-                                    "name2": "Сырок Гл зам мол жир Чудо БисквПеч 24.6% 40гх24 ПП",
+                                    type: "product", "name": "Сырок Гл зам мол жир Чудо БисквПеч 24.6% 40гх24 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "БИСКВИТ",
                                     "level6": "ФЛОУПАК",
@@ -8435,7 +8516,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1058,
-                                    "name2": "Сырок Гл зам мол жир Чудо Ваниль 25.6% 40г х24 ПП",
+                                    type: "product", "name": "Сырок Гл зам мол жир Чудо Ваниль 25.6% 40г х24 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ФЛОУПАК",
@@ -8443,7 +8524,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1059,
-                                    "name2": "Сырок Гл зам мол жир Чудо Ваниль 25.6% 40г х36 ПП",
+                                    type: "product", "name": "Сырок Гл зам мол жир Чудо Ваниль 25.6% 40г х36 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ФЛОУПАК",
@@ -8451,7 +8532,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1060,
-                                    "name2": "Сырок Гл зам мол жир Чудо Кокос 28.7% 40г х36 ПП",
+                                    type: "product", "name": "Сырок Гл зам мол жир Чудо Кокос 28.7% 40г х36 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "КОКОС",
                                     "level6": "ФЛОУПАК",
@@ -8459,7 +8540,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1061,
-                                    "name2": "Сырок Гл зам мол жир Чудо Шоколад 25.6% 40г х24 ПП",
+                                    type: "product", "name": "Сырок Гл зам мол жир Чудо Шоколад 25.6% 40г х24 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ФЛОУПАК",
@@ -8467,7 +8548,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1062,
-                                    "name2": "Сырок Гл раст жир Чудо Кокос 23% 40г х36 ПП",
+                                    type: "product", "name": "Сырок Гл раст жир Чудо Кокос 23% 40г х36 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "КОКОС",
                                     "level6": "ФЛОУПАК",
@@ -8475,7 +8556,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1063,
-                                    "name2": "Сырок Гл Чудо Коллекц Ваниль 25% 50г х12 ПП",
+                                    type: "product", "name": "Сырок Гл Чудо Коллекц Ваниль 25% 50г х12 ПП",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "КАРТОН",
@@ -8483,7 +8564,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1064,
-                                    "name2": "Сырок гл Чудо с печ биск 23% 1х24х40г",
+                                    type: "product", "name": "Сырок гл Чудо с печ биск 23% 1х24х40г",
                                     "level4": "ЧУДО",
                                     "level5": "БИСКВИТ",
                                     "level6": "ФЛОУПАК",
@@ -8491,7 +8572,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1065,
-                                    "name2": "Сырок гл Чудо шок 23% 1х36х40г",
+                                    type: "product", "name": "Сырок гл Чудо шок 23% 1х36х40г",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ФЛОУПАК",
@@ -8499,7 +8580,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1066,
-                                    "name2": "Сырок глазир Чудо Кокос 28.7% 45г х12 Карт,полипр",
+                                    type: "product", "name": "Сырок глазир Чудо Кокос 28.7% 45г х12 Карт,полипр",
                                     "level4": "ЧУДО",
                                     "level5": "КОКОС",
                                     "level6": "КАРТОН",
@@ -8507,7 +8588,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1067,
-                                    "name2": "Сырок глазир Чудо Сгущенк 24.6% 45г х12 Карт,полип",
+                                    type: "product", "name": "Сырок глазир Чудо Сгущенк 24.6% 45г х12 Карт,полип",
                                     "level4": "ЧУДО",
                                     "level5": "СГУЩЕНКА",
                                     "level6": "КАРТОН",
@@ -8515,7 +8596,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1068,
-                                    "name2": "Сырок глазиров Чудо Ваниль 25% 45г х12 карт,полипр",
+                                    type: "product", "name": "Сырок глазиров Чудо Ваниль 25% 45г х12 карт,полипр",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "КАРТОН",
@@ -8523,7 +8604,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1069,
-                                    "name2": "Сырок Гл зам мол жир Чудо Кокос 28.7% 40г х24 ПП",
+                                    type: "product", "name": "Сырок Гл зам мол жир Чудо Кокос 28.7% 40г х24 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "КОКОС",
                                     "level6": "ФЛОУПАК",
@@ -8531,7 +8612,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1070,
-                                    "name2": "Сырок Гл зам мол жир Чудо Шоколад 25.6% 40г х36 ПП",
+                                    type: "product", "name": "Сырок Гл зам мол жир Чудо Шоколад 25.6% 40г х36 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ФЛОУПАК",
@@ -8539,7 +8620,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1071,
-                                    "name2": "Сырок глаз с печен Чудо бисквит 24.6% 40г х24 (НД)",
+                                    type: "product", "name": "Сырок глаз с печен Чудо бисквит 24.6% 40г х24 (НД)",
                                     "level4": "ЧУДО",
                                     "level5": "БИСКВИТ",
                                     "level6": "ФЛОУПАК",
@@ -8547,7 +8628,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1072,
-                                    "name2": "Сырок глазир Ополье Ваниль 25.6% 40г полипр 12Х",
+                                    type: "product", "name": "Сырок глазир Ополье Ваниль 25.6% 40г полипр 12Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ФЛОУПАК",
@@ -8555,7 +8636,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1073,
-                                    "name2": "Сырок глазир Ополье Кокос 28.7% 40г полипр 12Х",
+                                    type: "product", "name": "Сырок глазир Ополье Кокос 28.7% 40г полипр 12Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "КОКОС",
                                     "level6": "ФЛОУПАК",
@@ -8563,7 +8644,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1074,
-                                    "name2": "Сырок глазир Ополье Шоколад 25.6% 40г полипр 12Х",
+                                    type: "product", "name": "Сырок глазир Ополье Шоколад 25.6% 40г полипр 12Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ФЛОУПАК",
@@ -8571,7 +8652,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1075,
-                                    "name2": "Сырок глазир Чудо Ваниль 25.6% 40г х24 полипр (НД)",
+                                    type: "product", "name": "Сырок глазир Чудо Ваниль 25.6% 40г х24 полипр (НД)",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ФЛОУПАК",
@@ -8579,7 +8660,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1076,
-                                    "name2": "Сырок глазир Чудо Ваниль 25.6% 40г х36 полипр (НД)",
+                                    type: "product", "name": "Сырок глазир Чудо Ваниль 25.6% 40г х36 полипр (НД)",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ФЛОУПАК",
@@ -8587,7 +8668,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1077,
-                                    "name2": "Сырок глазир Чудо Кокос 28.7% 40г х24 полипр (НД)",
+                                    type: "product", "name": "Сырок глазир Чудо Кокос 28.7% 40г х24 полипр (НД)",
                                     "level4": "ЧУДО",
                                     "level5": "КОКОС",
                                     "level6": "ФЛОУПАК",
@@ -8595,7 +8676,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1078,
-                                    "name2": "Сырок глазир Чудо Кокос 28.7% 40г х36 полипр (НД)",
+                                    type: "product", "name": "Сырок глазир Чудо Кокос 28.7% 40г х36 полипр (НД)",
                                     "level4": "ЧУДО",
                                     "level5": "КОКОС",
                                     "level6": "ФЛОУПАК",
@@ -8603,7 +8684,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1079,
-                                    "name2": "Сырок глазир Чудо Шоколад 25.6% 40г х24 полипр(НД)",
+                                    type: "product", "name": "Сырок глазир Чудо Шоколад 25.6% 40г х24 полипр(НД)",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ФЛОУПАК",
@@ -8611,7 +8692,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1080,
-                                    "name2": "Сырок глазир Чудо Шоколад 25.6% 40г х36 полипр(НД)",
+                                    type: "product", "name": "Сырок глазир Чудо Шоколад 25.6% 40г х36 полипр(НД)",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ФЛОУПАК",
@@ -8622,11 +8703,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1081,
                             "name": "Охлажденные Снэки",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1082,
-                                    "name2": "Пирож Бисквит Чудо Клубн глазир 25% 30г х24 ПП",
+                                    type: "product", "name": "Пирож Бисквит Чудо Клубн глазир 25% 30г х24 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "ФЛОУПАК",
@@ -8634,7 +8715,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1083,
-                                    "name2": "Пирож Бисквит Чудо МолКрем 25% 28г х24 ПП",
+                                    type: "product", "name": "Пирож Бисквит Чудо МолКрем 25% 28г х24 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -8642,7 +8723,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1084,
-                                    "name2": "Пирож Бисквит Чудо МолКрем глазир 25% 30г х24 ПП",
+                                    type: "product", "name": "Пирож Бисквит Чудо МолКрем глазир 25% 30г х24 ПП",
                                     "level4": "ЧУДО",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -8653,11 +8734,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1085,
                             "name": "Пудинг",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1086,
-                                    "name2": "Пудинг Мол Чудо Ваниль 3% 125г х24 Четв",
+                                    type: "product", "name": "Пудинг Мол Чудо Ваниль 3% 125г х24 Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -8665,7 +8746,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1087,
-                                    "name2": "Пудинг Мол Чудо Карамель 3% 125г х24 Четв",
+                                    type: "product", "name": "Пудинг Мол Чудо Карамель 3% 125г х24 Четв",
                                     "level4": "ЧУДО",
                                     "level5": "КАРАМЕЛЬ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -8673,7 +8754,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1088,
-                                    "name2": "Пудинг Мол Чудо Шоколад 3.1% 125г х24 Четв",
+                                    type: "product", "name": "Пудинг Мол Чудо Шоколад 3.1% 125г х24 Четв",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -8681,7 +8762,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1089,
-                                    "name2": "Пудинг Чудо ваниль 3% 1х24х125г",
+                                    type: "product", "name": "Пудинг Чудо ваниль 3% 1х24х125г",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -8689,7 +8770,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1090,
-                                    "name2": "Пудинг Чудо кар 3% 1х24х125г",
+                                    type: "product", "name": "Пудинг Чудо кар 3% 1х24х125г",
                                     "level4": "ЧУДО",
                                     "level5": "КАРАМЕЛЬ",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -8697,7 +8778,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1091,
-                                    "name2": "Пудинг Чудо шок 3% 1х24х125г",
+                                    type: "product", "name": "Пудинг Чудо шок 3% 1х24х125г",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "ЖЕСТКИЙ ПЛАСТИКОВЫЙ СТАКАНЧИК",
@@ -8710,16 +8791,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 1092,
                     "name": "Сливки",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 1093,
                             "name": "Сливки Пастеризованные",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1094,
-                                    "name2": "Сливки пастер. Кунгурский 10% 0.5л ФП",
+                                    type: "product", "name": "Сливки пастер. Кунгурский 10% 0.5л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -8727,7 +8808,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1095,
-                                    "name2": "Сливоч коктей пастер ДвД ВанилКарам 10%270г х8 ПЭТ",
+                                    type: "product", "name": "Сливоч коктей пастер ДвД ВанилКарам 10%270г х8 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "ВАНИЛЬ-КАРАМЕЛЬ",
                                     "level6": "ПЭТ",
@@ -8735,7 +8816,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1096,
-                                    "name2": "МКК Сливки пастер Кунгурский 10% 0.5л ФП",
+                                    type: "product", "name": "МКК Сливки пастер Кунгурский 10% 0.5л ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -8743,7 +8824,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1097,
-                                    "name2": "Сливки пастер Ополье 10% 0.5л TBSq",
+                                    type: "product", "name": "Сливки пастер Ополье 10% 0.5л TBSq",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -8751,7 +8832,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1098,
-                                    "name2": "Сливки пастеризованные ДвД 10% 270г х8 ПЭТ",
+                                    type: "product", "name": "Сливки пастеризованные ДвД 10% 270г х8 ПЭТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -8762,11 +8843,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1099,
                             "name": "Сливки Стерилизованные",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1100,
-                                    "name2": "Сливки стер Домик в деревне 10% 480г CombiFit 6Х",
+                                    type: "product", "name": "Сливки стер Домик в деревне 10% 480г CombiFit 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "КОМБИ ФИТ",
@@ -8774,7 +8855,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1101,
-                                    "name2": "Сливки стер Домик в деревне 20% 480г CombiFit 6Х",
+                                    type: "product", "name": "Сливки стер Домик в деревне 20% 480г CombiFit 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "КОМБИ ФИТ",
@@ -8782,7 +8863,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1102,
-                                    "name2": "Сливки стерил ДВД 10% 200г х21 СК",
+                                    type: "product", "name": "Сливки стерил ДВД 10% 200г х21 СК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -8790,7 +8871,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1103,
-                                    "name2": "Сливки стерил ДВД 10% 480г х12 КФ",
+                                    type: "product", "name": "Сливки стерил ДВД 10% 480г х12 КФ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "КОМБИ ФИТ",
@@ -8798,7 +8879,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1104,
-                                    "name2": "Сливки стерил ДВД 10% 750г х12 КФ",
+                                    type: "product", "name": "Сливки стерил ДВД 10% 750г х12 КФ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "КОМБИ ФИТ",
@@ -8806,7 +8887,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1105,
-                                    "name2": "Сливки стерил ДВД 20% 200г х21 СК",
+                                    type: "product", "name": "Сливки стерил ДВД 20% 200г х21 СК",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -8814,7 +8895,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1106,
-                                    "name2": "Сливки стерил ДВД 20% 480г х12 КФ",
+                                    type: "product", "name": "Сливки стерил ДВД 20% 480г х12 КФ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "КОМБИ ФИТ",
@@ -8822,7 +8903,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1107,
-                                    "name2": "Сливки стерил ДВД 25% 480г х12 КФ",
+                                    type: "product", "name": "Сливки стерил ДВД 25% 480г х12 КФ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "КОМБИ ФИТ",
@@ -8830,7 +8911,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1108,
-                                    "name2": "Сливки стерил ДВД 33% 480г х12 КФ",
+                                    type: "product", "name": "Сливки стерил ДВД 33% 480г х12 КФ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "КОМБИ ФИТ",
@@ -8838,7 +8919,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1109,
-                                    "name2": "Сливки стерил Домик в деревне 10% 200г TBASq 10Х",
+                                    type: "product", "name": "Сливки стерил Домик в деревне 10% 200г TBASq 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ТЕТРА ПАК СКУЭР",
@@ -8851,16 +8932,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 1110,
                     "name": "Сметана",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 1111,
                             "name": "Творожные Продукты",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1112,
-                                    "name2": "МКК Творожок Кунгурский 5% 10кг вес",
+                                    type: "product", "name": "МКК Творожок Кунгурский 5% 10кг вес",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "Пластиковое ведерко",
@@ -8871,11 +8952,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1113,
                             "name": "Сметана",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1114,
-                                    "name2": "ВСметана Русское молоко 20% 250г х12 МСТ",
+                                    type: "product", "name": "ВСметана Русское молоко 20% 250г х12 МСТ",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -8883,7 +8964,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1115,
-                                    "name2": "Сметана PL Русское молоко 20% 180г х12 МСТ",
+                                    type: "product", "name": "Сметана PL Русское молоко 20% 180г х12 МСТ",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -8891,7 +8972,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1116,
-                                    "name2": "Сметана БТМ 15% 950г х10 ППак",
+                                    type: "product", "name": "Сметана БТМ 15% 950г х10 ППак",
                                     "level4": "NON BRANDED",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -8899,7 +8980,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1117,
-                                    "name2": "Сметана БТМ 20% 950г х10 ППак",
+                                    type: "product", "name": "Сметана БТМ 20% 950г х10 ППак",
                                     "level4": "NON BRANDED",
                                     "level5": "",
                                     "level6": "ТЕТРА РЕКС",
@@ -8907,7 +8988,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1118,
-                                    "name2": "Сметана Веселый молочник 10% 330г х8 моност",
+                                    type: "product", "name": "Сметана Веселый молочник 10% 330г х8 моност",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8915,7 +8996,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1119,
-                                    "name2": "Сметана Веселый молочник 20% 1х24х450г ФП",
+                                    type: "product", "name": "Сметана Веселый молочник 20% 1х24х450г ФП",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -8923,7 +9004,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1120,
-                                    "name2": "Сметана ВесМол 10% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана ВесМол 10% 330г х12 МСТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8931,7 +9012,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1121,
-                                    "name2": "Сметана ВесМол 15% 180г х12 МСТ",
+                                    type: "product", "name": "Сметана ВесМол 15% 180г х12 МСТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8939,7 +9020,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1122,
-                                    "name2": "Сметана ВесМол 15% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана ВесМол 15% 330г х12 МСТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8947,7 +9028,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1123,
-                                    "name2": "Сметана ВесМол 20% 180г х12 МСТ",
+                                    type: "product", "name": "Сметана ВесМол 20% 180г х12 МСТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8955,7 +9036,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1124,
-                                    "name2": "Сметана ВесМол 20% 300г МСТ СГ20 8Х",
+                                    type: "product", "name": "Сметана ВесМол 20% 300г МСТ СГ20 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8963,7 +9044,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1125,
-                                    "name2": "Сметана ВесМол 20% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана ВесМол 20% 330г х12 МСТ",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8971,7 +9052,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1126,
-                                    "name2": "Сметана ВесМол 20% 450г х12 ПлФП",
+                                    type: "product", "name": "Сметана ВесМол 20% 450г х12 ПлФП",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -8979,7 +9060,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1127,
-                                    "name2": "Сметана ДвД 10% 1х12х330г мст",
+                                    type: "product", "name": "Сметана ДвД 10% 1х12х330г мст",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8987,7 +9068,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1128,
-                                    "name2": "Сметана ДВД 10% 330г х6 МСТ",
+                                    type: "product", "name": "Сметана ДВД 10% 330г х6 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -8995,7 +9076,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1129,
-                                    "name2": "Сметана ДВД 10% 330г х8 МСТ",
+                                    type: "product", "name": "Сметана ДВД 10% 330г х8 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9003,7 +9084,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1130,
-                                    "name2": "Сметана ДВД 15% 180г МСТ (срок 25) 12Х",
+                                    type: "product", "name": "Сметана ДВД 15% 180г МСТ (срок 25) 12Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9011,7 +9092,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1131,
-                                    "name2": "Сметана ДВД 15% 180г х12 МСТ срок 20",
+                                    type: "product", "name": "Сметана ДВД 15% 180г х12 МСТ срок 20",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9019,7 +9100,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1132,
-                                    "name2": "Сметана ДВД 15% 330г КартМСТ (срок25) 12Х",
+                                    type: "product", "name": "Сметана ДВД 15% 330г КартМСТ (срок25) 12Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9027,7 +9108,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1133,
-                                    "name2": "Сметана ДВД 15% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана ДВД 15% 330г х12 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9035,7 +9116,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1134,
-                                    "name2": "Сметана ДВД 15% 330г х12 МСТ срок",
+                                    type: "product", "name": "Сметана ДВД 15% 330г х12 МСТ срок",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9043,7 +9124,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1135,
-                                    "name2": "Сметана ДВД 15% 400г х8 МСТ",
+                                    type: "product", "name": "Сметана ДВД 15% 400г х8 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9051,7 +9132,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1136,
-                                    "name2": "Сметана ДВД 20% 180г х12 МСТ",
+                                    type: "product", "name": "Сметана ДВД 20% 180г х12 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9059,7 +9140,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1137,
-                                    "name2": "Сметана ДВД 20% 180г х12 МСТ срок 25",
+                                    type: "product", "name": "Сметана ДВД 20% 180г х12 МСТ срок 25",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9067,7 +9148,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1138,
-                                    "name2": "Сметана ДВД 20% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана ДВД 20% 330г х12 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9075,7 +9156,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1139,
-                                    "name2": "Сметана ДВД 20% 330г х12 МСТ срок 25",
+                                    type: "product", "name": "Сметана ДВД 20% 330г х12 МСТ срок 25",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9083,7 +9164,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1140,
-                                    "name2": "Сметана ДВД 20% 400г х8 МСТ",
+                                    type: "product", "name": "Сметана ДВД 20% 400г х8 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9091,7 +9172,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1141,
-                                    "name2": "Сметана ДВД Отборн 25% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана ДВД Отборн 25% 330г х12 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9099,7 +9180,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1142,
-                                    "name2": "Сметана Домик в деревне 15% 300г МСТ СГ20 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 15% 300г МСТ СГ20 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9107,7 +9188,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1143,
-                                    "name2": "Сметана Домик в деревне 20% 300г МСТ СГ20 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 20% 300г МСТ СГ20 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9115,7 +9196,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1144,
-                                    "name2": "Сметана Домик в деревне 25% 1х12х180г м/ст",
+                                    type: "product", "name": "Сметана Домик в деревне 25% 1х12х180г м/ст",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9123,7 +9204,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1145,
-                                    "name2": "Сметана Домик в деревне 25% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 25% 300г МСТ 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9131,7 +9212,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1146,
-                                    "name2": "Сметана Каждый день 15% 250г х12 МСТ",
+                                    type: "product", "name": "Сметана Каждый день 15% 250г х12 МСТ",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9139,7 +9220,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1147,
-                                    "name2": "Сметана Каждый день 15% 500г х12 МСТ",
+                                    type: "product", "name": "Сметана Каждый день 15% 500г х12 МСТ",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9147,7 +9228,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1148,
-                                    "name2": "Сметана Каждый день 20% 250г х12 МСТ",
+                                    type: "product", "name": "Сметана Каждый день 20% 250г х12 МСТ",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9155,7 +9236,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1149,
-                                    "name2": "Сметана Каждый день 20% 500г х12 МСТ",
+                                    type: "product", "name": "Сметана Каждый день 20% 500г х12 МСТ",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9163,7 +9244,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1150,
-                                    "name2": "Сметана КубБуренка 15% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана КубБуренка 15% 330г х12 МСТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9171,7 +9252,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1151,
-                                    "name2": "Сметана КубБуренка 20% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана КубБуренка 20% 330г х12 МСТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9179,7 +9260,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1152,
-                                    "name2": "Сметана КубБуренка 20% 400г х12 МСТ",
+                                    type: "product", "name": "Сметана КубБуренка 20% 400г х12 МСТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9187,7 +9268,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1153,
-                                    "name2": "Сметана Лакомо 20% 250г х12 МСТ",
+                                    type: "product", "name": "Сметана Лакомо 20% 250г х12 МСТ",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9195,7 +9276,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1154,
-                                    "name2": "Сметана Ополье 10% 330г х8 МСТ",
+                                    type: "product", "name": "Сметана Ополье 10% 330г х8 МСТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9203,7 +9284,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1155,
-                                    "name2": "Сметана Ополье 15% 180г х12 МСТ",
+                                    type: "product", "name": "Сметана Ополье 15% 180г х12 МСТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9211,7 +9292,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1156,
-                                    "name2": "Сметана Ополье 15% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана Ополье 15% 330г х12 МСТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9219,7 +9300,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1157,
-                                    "name2": "Сметана Ополье 20% 180г х12 МСТ",
+                                    type: "product", "name": "Сметана Ополье 20% 180г х12 МСТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9227,7 +9308,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1158,
-                                    "name2": "Сметана Ополье 20% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана Ополье 20% 330г х12 МСТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9235,7 +9316,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1159,
-                                    "name2": "Сметана Отборн КубБуренка 25% 330г х12 МСТ",
+                                    type: "product", "name": "Сметана Отборн КубБуренка 25% 330г х12 МСТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9243,7 +9324,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1160,
-                                    "name2": "Сметана Русское молоко 15% 250г х12 МСТ",
+                                    type: "product", "name": "Сметана Русское молоко 15% 250г х12 МСТ",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9251,7 +9332,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1161,
-                                    "name2": "МКК Сметана Кунгурский 15% 10кг весовая",
+                                    type: "product", "name": "МКК Сметана Кунгурский 15% 10кг весовая",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "Пластиковое ведерко",
@@ -9259,7 +9340,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1162,
-                                    "name2": "МКК Сметана Кунгурский 15% 180г моностакан",
+                                    type: "product", "name": "МКК Сметана Кунгурский 15% 180г моностакан",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9267,7 +9348,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1163,
-                                    "name2": "МКК Сметана Кунгурский 15% 250г ФП",
+                                    type: "product", "name": "МКК Сметана Кунгурский 15% 250г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -9275,7 +9356,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1164,
-                                    "name2": "МКК Сметана Кунгурский 15% 400г +100г МСТ АКЦ 20Х",
+                                    type: "product", "name": "МКК Сметана Кунгурский 15% 400г +100г МСТ АКЦ 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9283,7 +9364,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1165,
-                                    "name2": "МКК Сметана Кунгурский 15% 400г моностакан",
+                                    type: "product", "name": "МКК Сметана Кунгурский 15% 400г моностакан",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9291,7 +9372,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1166,
-                                    "name2": "МКК Сметана Кунгурский 15% 450г ФП",
+                                    type: "product", "name": "МКК Сметана Кунгурский 15% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -9299,7 +9380,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1167,
-                                    "name2": "МКК Сметана Кунгурский 15% 5кг весовая",
+                                    type: "product", "name": "МКК Сметана Кунгурский 15% 5кг весовая",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "Пластиковое ведерко",
@@ -9307,7 +9388,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1168,
-                                    "name2": "МКК Сметана Кунгурский 20% 10кг весовая",
+                                    type: "product", "name": "МКК Сметана Кунгурский 20% 10кг весовая",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "Пластиковое ведерко",
@@ -9315,7 +9396,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1169,
-                                    "name2": "МКК Сметана Кунгурский 20% 180г мст",
+                                    type: "product", "name": "МКК Сметана Кунгурский 20% 180г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9323,7 +9404,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1170,
-                                    "name2": "МКК Сметана Кунгурский 20% 250г ФП",
+                                    type: "product", "name": "МКК Сметана Кунгурский 20% 250г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -9331,7 +9412,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1171,
-                                    "name2": "МКК Сметана Кунгурский 20% 400г +100г мст АКЦ 20Х",
+                                    type: "product", "name": "МКК Сметана Кунгурский 20% 400г +100г мст АКЦ 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9339,7 +9420,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1172,
-                                    "name2": "МКК Сметана Кунгурский 20% 400г мст",
+                                    type: "product", "name": "МКК Сметана Кунгурский 20% 400г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9347,7 +9428,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1173,
-                                    "name2": "МКК Сметана Кунгурский 20% 450г ФП",
+                                    type: "product", "name": "МКК Сметана Кунгурский 20% 450г ФП",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -9355,7 +9436,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1174,
-                                    "name2": "МКК Сметана Кунгурский 20% 5кг весовая",
+                                    type: "product", "name": "МКК Сметана Кунгурский 20% 5кг весовая",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "Пластиковое ведерко",
@@ -9363,7 +9444,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1175,
-                                    "name2": "Сметана PL Каждый день 15% 180г МСТ 8Х",
+                                    type: "product", "name": "Сметана PL Каждый день 15% 180г МСТ 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9371,7 +9452,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1176,
-                                    "name2": "Сметана PL Каждый день 15% 250г МСТ 8Х",
+                                    type: "product", "name": "Сметана PL Каждый день 15% 250г МСТ 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9379,7 +9460,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1177,
-                                    "name2": "Сметана PL Каждый день 15% 350г МСТ 8Х",
+                                    type: "product", "name": "Сметана PL Каждый день 15% 350г МСТ 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9387,7 +9468,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1178,
-                                    "name2": "Сметана PL Каждый день 15% 500г МСТ 8Х",
+                                    type: "product", "name": "Сметана PL Каждый день 15% 500г МСТ 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9395,7 +9476,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1179,
-                                    "name2": "Сметана PL Каждый день 20% 180г МСТ 8Х",
+                                    type: "product", "name": "Сметана PL Каждый день 20% 180г МСТ 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9403,7 +9484,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1180,
-                                    "name2": "Сметана PL Каждый день 20% 250г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана PL Каждый день 20% 250г МСТ СГ25 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9411,7 +9492,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1181,
-                                    "name2": "Сметана PL Каждый день 20% 350г МСТ 8Х",
+                                    type: "product", "name": "Сметана PL Каждый день 20% 350г МСТ 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9419,7 +9500,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1182,
-                                    "name2": "Сметана PL Каждый день 20% 500г МСт СГ25 8Х",
+                                    type: "product", "name": "Сметана PL Каждый день 20% 500г МСт СГ25 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (КАЖДЫЙ ДЕНЬ)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9427,7 +9508,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1183,
-                                    "name2": "Сметана PL Лакомо 20% 250г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана PL Лакомо 20% 250г МСТ СГ25 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (ЛАКОМО)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9435,7 +9516,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1184,
-                                    "name2": "Сметана PL Русское молоко 20% 180г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана PL Русское молоко 20% 180г МСТ СГ25 8Х",
                                     "level4": "ЧАСТНАЯ МАРКА (РУССКОЕ МОЛОКО)",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9443,7 +9524,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1185,
-                                    "name2": "Сметана Веселый молочник 15% 180г МСТ 8Х",
+                                    type: "product", "name": "Сметана Веселый молочник 15% 180г МСТ 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9451,7 +9532,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1186,
-                                    "name2": "Сметана Веселый молочник 15% 180г МСТ 8Х",
+                                    type: "product", "name": "Сметана Веселый молочник 15% 180г МСТ 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9459,7 +9540,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1187,
-                                    "name2": "Сметана Веселый молочник 20% 180г мст",
+                                    type: "product", "name": "Сметана Веселый молочник 20% 180г мст",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9467,7 +9548,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1188,
-                                    "name2": "Сметана Веселый молочник 20% 180г МСТ 8Х",
+                                    type: "product", "name": "Сметана Веселый молочник 20% 180г МСТ 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9475,7 +9556,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1189,
-                                    "name2": "Сметана ВесМол 10% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана ВесМол 10% 300г МСТ 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9483,7 +9564,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1190,
-                                    "name2": "Сметана ВесМол 15% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана ВесМол 15% 300г МСТ 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9491,7 +9572,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1191,
-                                    "name2": "Сметана ВесМол 15% 300г МСТ СГ20 8Х",
+                                    type: "product", "name": "Сметана ВесМол 15% 300г МСТ СГ20 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9499,7 +9580,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1192,
-                                    "name2": "Сметана ВесМол 15% 300г МСТ СГ21 8Х",
+                                    type: "product", "name": "Сметана ВесМол 15% 300г МСТ СГ21 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9507,7 +9588,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1193,
-                                    "name2": "Сметана ВесМол 20% 0.25кг х40 ПлФП",
+                                    type: "product", "name": "Сметана ВесМол 20% 0.25кг х40 ПлФП",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -9515,7 +9596,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1194,
-                                    "name2": "Сметана ВесМол 20% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана ВесМол 20% 300г МСТ 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9523,7 +9604,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1195,
-                                    "name2": "Сметана ВесМол 20% 300г МСТ СГ21 8Х",
+                                    type: "product", "name": "Сметана ВесМол 20% 300г МСТ СГ21 8Х",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9531,7 +9612,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1196,
-                                    "name2": "Сметана ВесМол 20% 450г х24 ПлФП",
+                                    type: "product", "name": "Сметана ВесМол 20% 450г х24 ПлФП",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -9539,7 +9620,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1197,
-                                    "name2": "Сметана ДВД 15% 180г МСТ (срок 25) 8Х",
+                                    type: "product", "name": "Сметана ДВД 15% 180г МСТ (срок 25) 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9547,7 +9628,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1198,
-                                    "name2": "Сметана ДВД 15% 180г МСТ СГ30 8Х",
+                                    type: "product", "name": "Сметана ДВД 15% 180г МСТ СГ30 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9555,7 +9636,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1199,
-                                    "name2": "Сметана ДвД 20% 180г МСТ СГ30 8Х",
+                                    type: "product", "name": "Сметана ДвД 20% 180г МСТ СГ30 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9563,7 +9644,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1200,
-                                    "name2": "Сметана Домик в деревне 10% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 10% 300г МСТ 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9571,7 +9652,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1201,
-                                    "name2": "Сметана Домик в деревне 10% 300г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 10% 300г МСТ СГ25 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9579,7 +9660,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1202,
-                                    "name2": "Сметана Домик в деревне 15% 180г МСТ 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 15% 180г МСТ 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9587,7 +9668,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1203,
-                                    "name2": "Сметана Домик в деревне 15% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 15% 300г МСТ 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9595,7 +9676,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1204,
-                                    "name2": "Сметана Домик в деревне 15% 300г МСТ СГ21 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 15% 300г МСТ СГ21 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9603,7 +9684,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1205,
-                                    "name2": "Сметана Домик в деревне 15% 300г МСТ СГ30 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 15% 300г МСТ СГ30 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9611,7 +9692,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1206,
-                                    "name2": "Сметана Домик в деревне 20% 180г МСТ (срок25) 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 20% 180г МСТ (срок25) 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9619,7 +9700,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1207,
-                                    "name2": "Сметана Домик в деревне 20% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 20% 300г МСТ 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9627,7 +9708,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1208,
-                                    "name2": "Сметана Домик в деревне 20% 300г МСТ СГ21 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 20% 300г МСТ СГ21 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9635,7 +9716,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1209,
-                                    "name2": "Сметана Домик в деревне 20% 300г МСТ СГ30 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 20% 300г МСТ СГ30 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9643,7 +9724,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1210,
-                                    "name2": "Сметана Домик в деревне 25% 300г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне 25% 300г МСТ СГ25 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9651,7 +9732,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1211,
-                                    "name2": "Сметана Домик в деревне Взбитая 14% 185г МСт 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне Взбитая 14% 185г МСт 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "СЛАДКИЙ",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9659,7 +9740,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1212,
-                                    "name2": "Сметана Домик в деревне Сладкая 13.5% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана Домик в деревне Сладкая 13.5% 300г МСТ 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "СЛАДКИЙ",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9667,7 +9748,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1213,
-                                    "name2": "Сметана КубБур 15% 180г МСТ 8Х",
+                                    type: "product", "name": "Сметана КубБур 15% 180г МСТ 8Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9675,7 +9756,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1214,
-                                    "name2": "Сметана КубБур 15% 180г х12 МСТ",
+                                    type: "product", "name": "Сметана КубБур 15% 180г х12 МСТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9683,7 +9764,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1215,
-                                    "name2": "Сметана КубБур 15% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана КубБур 15% 300г МСТ 8Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9691,7 +9772,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1216,
-                                    "name2": "Сметана КубБур 20% 180г МСТ 8Х",
+                                    type: "product", "name": "Сметана КубБур 20% 180г МСТ 8Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9699,7 +9780,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1217,
-                                    "name2": "Сметана КубБур 20% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана КубБур 20% 300г МСТ 8Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9707,7 +9788,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1218,
-                                    "name2": "Сметана КубБур 25% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана КубБур 25% 300г МСТ 8Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9715,7 +9796,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1219,
-                                    "name2": "Сметана КубБур Взбитая 14% 185г МСт 8Х",
+                                    type: "product", "name": "Сметана КубБур Взбитая 14% 185г МСт 8Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "СЛАДКИЙ",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9723,7 +9804,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1220,
-                                    "name2": "Сметана КубБур Сладкая 13.5% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана КубБур Сладкая 13.5% 300г МСТ 8Х",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "СЛАДКИЙ",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9731,7 +9812,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1221,
-                                    "name2": "Сметана КубБуренка 20% 0.18кг х12 МСТ",
+                                    type: "product", "name": "Сметана КубБуренка 20% 0.18кг х12 МСТ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9739,7 +9820,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1222,
-                                    "name2": "Сметана КубБуренка 20% 400г х8 ПлЧ",
+                                    type: "product", "name": "Сметана КубБуренка 20% 400г х8 ПлЧ",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "РУКАВНАЯ ОБОЛОЧКА",
@@ -9747,7 +9828,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1223,
-                                    "name2": "Сметана Кунгурский 15% 450г ФП ЦЕНА НИЖЕ",
+                                    type: "product", "name": "Сметана Кунгурский 15% 450г ФП ЦЕНА НИЖЕ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -9755,7 +9836,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1224,
-                                    "name2": "Сметана Кунгурский 20% 450г ФП ЦЕНА НИЖЕ",
+                                    type: "product", "name": "Сметана Кунгурский 20% 450г ФП ЦЕНА НИЖЕ",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФИНПАК",
@@ -9763,7 +9844,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1225,
-                                    "name2": "Сметана Ополье 10% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана Ополье 10% 300г МСТ 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9771,7 +9852,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1226,
-                                    "name2": "Сметана Ополье 10% 300г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана Ополье 10% 300г МСТ СГ25 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9779,7 +9860,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1227,
-                                    "name2": "Сметана Ополье 15% 180г мст 8Х",
+                                    type: "product", "name": "Сметана Ополье 15% 180г мст 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9787,7 +9868,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1228,
-                                    "name2": "Сметана Ополье 15% 180г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана Ополье 15% 180г МСТ СГ25 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9795,7 +9876,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1229,
-                                    "name2": "Сметана Ополье 15% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана Ополье 15% 300г МСТ 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9803,7 +9884,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1230,
-                                    "name2": "Сметана Ополье 15% 300г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана Ополье 15% 300г МСТ СГ25 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9811,7 +9892,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1231,
-                                    "name2": "Сметана Ополье 20% 180г мст 8Х",
+                                    type: "product", "name": "Сметана Ополье 20% 180г мст 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9819,7 +9900,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1232,
-                                    "name2": "Сметана Ополье 20% 180г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана Ополье 20% 180г МСТ СГ25 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9827,7 +9908,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1233,
-                                    "name2": "Сметана Ополье 20% 250г х12 МСТ",
+                                    type: "product", "name": "Сметана Ополье 20% 250г х12 МСТ",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9835,7 +9916,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1234,
-                                    "name2": "Сметана Ополье 20% 300г МСТ 8Х",
+                                    type: "product", "name": "Сметана Ополье 20% 300г МСТ 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9843,7 +9924,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1235,
-                                    "name2": "Сметана Ополье 20% 300г МСТ СГ25 8Х",
+                                    type: "product", "name": "Сметана Ополье 20% 300г МСТ СГ25 8Х",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -9856,16 +9937,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 1236,
                     "name": "Сыр",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 1237,
                             "name": "Белые Сыры",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1238,
-                                    "name2": "Сыр Мяг ДВД Дерев свеж 45% 200г х12 МСТ",
+                                    type: "product", "name": "Сыр Мяг ДВД Дерев свеж 45% 200г х12 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9873,7 +9954,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1239,
-                                    "name2": "Сыр мягкий Деревенский свежий ДвД 45% 200г мст 6Х",
+                                    type: "product", "name": "Сыр мягкий Деревенский свежий ДвД 45% 200г мст 6Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -9884,11 +9965,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1240,
                             "name": "Желтые Сыры",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1241,
-                                    "name2": "Сыр Ламбер 50% 1/2 шар Вес КК 6 мес",
+                                    type: "product", "name": "Сыр Ламбер 50% 1/2 шар Вес КК 6 мес",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9896,7 +9977,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1242,
-                                    "name2": "Сыр Ламбер 50% 1/2 шар Вес КК 6 мес",
+                                    type: "product", "name": "Сыр Ламбер 50% 1/2 шар Вес КК 6 мес",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9904,7 +9985,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1243,
-                                    "name2": "Сыр Ламбер 50% 1000г Вес КК",
+                                    type: "product", "name": "Сыр Ламбер 50% 1000г Вес КК",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9912,7 +9993,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1244,
-                                    "name2": "Сыр Ламбер 50% 1кг Вес КК 9 мес",
+                                    type: "product", "name": "Сыр Ламбер 50% 1кг Вес КК 9 мес",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9920,7 +10001,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1245,
-                                    "name2": "Сыр Ламбер 50% 3гол Вес КК 9 мес ТА",
+                                    type: "product", "name": "Сыр Ламбер 50% 3гол Вес КК 9 мес ТА",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9928,7 +10009,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1246,
-                                    "name2": "Сыр Ламбер 50% 3гол Вес КК ТА",
+                                    type: "product", "name": "Сыр Ламбер 50% 3гол Вес КК ТА",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9936,7 +10017,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1247,
-                                    "name2": "Сыр Ламбер 50% с конс 50% 1/2 шар Вес КК 6 мес",
+                                    type: "product", "name": "Сыр Ламбер 50% с конс 50% 1/2 шар Вес КК 6 мес",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9944,7 +10025,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1248,
-                                    "name2": "Сыр Ламбер Сливочный 55% 1кг Вес КК",
+                                    type: "product", "name": "Сыр Ламбер Сливочный 55% 1кг Вес КК",
                                     "level4": "ЛАМБЕР",
                                     "level5": "СЛИВКИ",
                                     "level6": "ПЛЕНКА",
@@ -9952,7 +10033,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1249,
-                                    "name2": "Сыр Ламбер Сливочный 55% 1кг Вес КК",
+                                    type: "product", "name": "Сыр Ламбер Сливочный 55% 1кг Вес КК",
                                     "level4": "ЛАМБЕР",
                                     "level5": "СЛИВКИ",
                                     "level6": "ПЛЕНКА",
@@ -9960,7 +10041,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1250,
-                                    "name2": "Сыр Ламбер Тильзитер 50% 150г х12 ПлФП",
+                                    type: "product", "name": "Сыр Ламбер Тильзитер 50% 150г х12 ПлФП",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -9968,7 +10049,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1251,
-                                    "name2": "Сыр твердый Ламбер 50% 1кг вес 6 мес (X5)",
+                                    type: "product", "name": "Сыр твердый Ламбер 50% 1кг вес 6 мес (X5)",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9976,7 +10057,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1252,
-                                    "name2": "Сыр твердый Ламбер 50% 1кг вес 9 мес (X5)",
+                                    type: "product", "name": "Сыр твердый Ламбер 50% 1кг вес 9 мес (X5)",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9984,7 +10065,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1253,
-                                    "name2": "Сыр 50% 1кг Весовой прозр.пакет н/к (упк)",
+                                    type: "product", "name": "Сыр 50% 1кг Весовой прозр.пакет н/к (упк)",
                                     "level4": "NON BRANDED",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -9992,7 +10073,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1254,
-                                    "name2": "Сыр 55% 1кг Весовой прозр.пакет н/к (упк)",
+                                    type: "product", "name": "Сыр 55% 1кг Весовой прозр.пакет н/к (упк)",
                                     "level4": "NON BRANDED",
                                     "level5": "СЛИВКИ",
                                     "level6": "завернутый",
@@ -10000,7 +10081,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1255,
-                                    "name2": "Сыр Ламбер 50% 1/2 шара Вес КК",
+                                    type: "product", "name": "Сыр Ламбер 50% 1/2 шара Вес КК",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10008,7 +10089,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1256,
-                                    "name2": "Сыр Ламбер 50% 1/2 шара весов (Д) (кор)",
+                                    type: "product", "name": "Сыр Ламбер 50% 1/2 шара весов (Д) (кор)",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10016,7 +10097,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1257,
-                                    "name2": "Сыр Ламбер 50% 1/2 шара весов (ШК/5)Короб",
+                                    type: "product", "name": "Сыр Ламбер 50% 1/2 шара весов (ШК/5)Короб",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10024,7 +10105,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1258,
-                                    "name2": "Сыр Ламбер 50% 1000г вес 9мес для ПирПак (короб)",
+                                    type: "product", "name": "Сыр Ламбер 50% 1000г вес 9мес для ПирПак (короб)",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10032,7 +10113,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1259,
-                                    "name2": "Сыр Ламбер 50% 1000г вес для ПирПак (короб)",
+                                    type: "product", "name": "Сыр Ламбер 50% 1000г вес для ПирПак (короб)",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10040,7 +10121,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1260,
-                                    "name2": "Сыр Ламбер 50% 1000г Весовой СГ 210сут (короб)",
+                                    type: "product", "name": "Сыр Ламбер 50% 1000г Весовой СГ 210сут (короб)",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10048,7 +10129,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1261,
-                                    "name2": "Сыр Ламбер 50% 1кг Вес КК 9 мес",
+                                    type: "product", "name": "Сыр Ламбер 50% 1кг Вес КК 9 мес",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10056,7 +10137,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1262,
-                                    "name2": "Сыр Ламбер 50% 230г х10 ПлФП",
+                                    type: "product", "name": "Сыр Ламбер 50% 230г х10 ПлФП",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10064,7 +10145,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1263,
-                                    "name2": "Сыр Ламбер 50% 3гол Вес КК ТА",
+                                    type: "product", "name": "Сыр Ламбер 50% 3гол Вес КК ТА",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10072,7 +10153,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1264,
-                                    "name2": "Сыр Ламбер 50% Вес КК 9 мес ТА",
+                                    type: "product", "name": "Сыр Ламбер 50% Вес КК 9 мес ТА",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10080,7 +10161,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1265,
-                                    "name2": "Сыр Ламбер Сливочный 55% Вес КК 2ШК",
+                                    type: "product", "name": "Сыр Ламбер Сливочный 55% Вес КК 2ШК",
                                     "level4": "ЛАМБЕР",
                                     "level5": "СЛИВКИ",
                                     "level6": "ПЛЕНКА",
@@ -10088,7 +10169,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1266,
-                                    "name2": "Сыр Ламбер Тильзитер 50% 150г нарезка 6Х",
+                                    type: "product", "name": "Сыр Ламбер Тильзитер 50% 150г нарезка 6Х",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10096,7 +10177,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1267,
-                                    "name2": "Сыр Ламбер50%вес 3 гол в кор Танд СГ 210сут(короб)",
+                                    type: "product", "name": "Сыр Ламбер50%вес 3 гол в кор Танд СГ 210сут(короб)",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10104,7 +10185,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1268,
-                                    "name2": "Сыр твердый Ламбер 50% 1х1000г Весовой",
+                                    type: "product", "name": "Сыр твердый Ламбер 50% 1х1000г Весовой",
                                     "level4": "ЛАМБЕР",
                                     "level5": "",
                                     "level6": "ПЛЕНКА",
@@ -10115,11 +10196,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1269,
                             "name": "Плавленые Сыры",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1270,
-                                    "name2": "Сыр Плавл БТМ Сливочный Янтарь 60% 0.08кг х24 МСТ",
+                                    type: "product", "name": "Сыр Плавл БТМ Сливочный Янтарь 60% 0.08кг х24 МСТ",
                                     "level4": "NON BRANDED",
                                     "level5": "СЛИВКИ",
                                     "level6": "МОНОСТАКАН ПРЕДФОРМОВАННЫЙ",
@@ -10127,7 +10208,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1271,
-                                    "name2": "Сыр Плавл ВесМол с Ветчиной 44.3% 0.4кг х8 Ван",
+                                    type: "product", "name": "Сыр Плавл ВесМол с Ветчиной 44.3% 0.4кг х8 Ван",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "ВЕТЧИНА",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10135,7 +10216,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1272,
-                                    "name2": "Сыр Плавл ВесМол с Ветчиной 44.3% 190г х8 Ван",
+                                    type: "product", "name": "Сыр Плавл ВесМол с Ветчиной 44.3% 190г х8 Ван",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "ВЕТЧИНА",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10143,7 +10224,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1273,
-                                    "name2": "Сыр Плавл ВесМол с Грибами 44.5% 0.4кг х8 Ван",
+                                    type: "product", "name": "Сыр Плавл ВесМол с Грибами 44.5% 0.4кг х8 Ван",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "ГРИБЫ",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10151,7 +10232,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1274,
-                                    "name2": "Сыр Плавл ВесМол с Грибами 44.5% 190г х8 Ван",
+                                    type: "product", "name": "Сыр Плавл ВесМол с Грибами 44.5% 190г х8 Ван",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "ГРИБЫ",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10159,7 +10240,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1275,
-                                    "name2": "Сыр Плавл ВесМол Сливочный 49% 0.4кг х8 Ван",
+                                    type: "product", "name": "Сыр Плавл ВесМол Сливочный 49% 0.4кг х8 Ван",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "СЛИВКИ",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10167,7 +10248,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1276,
-                                    "name2": "Сыр Плавл ВесМол Сливочный 49% 190г х8 Ван",
+                                    type: "product", "name": "Сыр Плавл ВесМол Сливочный 49% 190г х8 Ван",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "СЛИВКИ",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10180,16 +10261,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 1277,
                     "name": "Творог",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 1278,
                             "name": "Творожные Продукты",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1279,
-                                    "name2": "Продукт Творож ВесМол 1.8% 180г х10 Фло",
+                                    type: "product", "name": "Продукт Творож ВесМол 1.8% 180г х10 Фло",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10197,7 +10278,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1280,
-                                    "name2": "Продукт Творож ВесМол 5% 180г х10 Фло",
+                                    type: "product", "name": "Продукт Творож ВесМол 5% 180г х10 Фло",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10208,11 +10289,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1281,
                             "name": "Творог Мягкий",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1282,
-                                    "name2": "Творог ДВД 5.5% 250г х16 Ван",
+                                    type: "product", "name": "Творог ДВД 5.5% 250г х16 Ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10220,7 +10301,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1283,
-                                    "name2": "Творог ДВД Обезжирен 250г х16 Ван",
+                                    type: "product", "name": "Творог ДВД Обезжирен 250г х16 Ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10228,7 +10309,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1284,
-                                    "name2": "Творог мягк Домик в дер 5.5% 200г х16 ванн",
+                                    type: "product", "name": "Творог мягк Домик в дер 5.5% 200г х16 ванн",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10236,7 +10317,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1285,
-                                    "name2": "Творог мягк обезж Домик в дер 0.1% 200г х16 ванн",
+                                    type: "product", "name": "Творог мягк обезж Домик в дер 0.1% 200г х16 ванн",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10244,7 +10325,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1286,
-                                    "name2": "Творог мягк обезж Домик в дер 0.1% 290г х8 МСТ",
+                                    type: "product", "name": "Творог мягк обезж Домик в дер 0.1% 290г х8 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10252,7 +10333,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1287,
-                                    "name2": "Творог мягкий ДВД 0.1% 200г х16 ван Миниуп",
+                                    type: "product", "name": "Творог мягкий ДВД 0.1% 200г х16 ван Миниуп",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10260,7 +10341,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1288,
-                                    "name2": "Творог мягкий ДВД 5.5% 200г х16 ван Миниуп",
+                                    type: "product", "name": "Творог мягкий ДВД 5.5% 200г х16 ван Миниуп",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10268,7 +10349,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1289,
-                                    "name2": "МКК Творог мягкий Кунгурский 1% 300г мст",
+                                    type: "product", "name": "МКК Творог мягкий Кунгурский 1% 300г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10276,7 +10357,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1290,
-                                    "name2": "МКК Творог мягкий Кунгурский 1% 300г мст",
+                                    type: "product", "name": "МКК Творог мягкий Кунгурский 1% 300г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10284,7 +10365,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1291,
-                                    "name2": "МКК Творог мягкий Кунгурский 5% 300г мст",
+                                    type: "product", "name": "МКК Творог мягкий Кунгурский 5% 300г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10292,7 +10373,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1292,
-                                    "name2": "Творог Мяг ДВД 5.5% 180г х12 Ван",
+                                    type: "product", "name": "Творог Мяг ДВД 5.5% 180г х12 Ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10300,7 +10381,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1293,
-                                    "name2": "Творог Мяг ДВД Обезжир 180г х12 Ван",
+                                    type: "product", "name": "Творог Мяг ДВД Обезжир 180г х12 Ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10308,7 +10389,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1294,
-                                    "name2": "Творог мягк Домик в деревне 5.5% 180г ван ДП 12X",
+                                    type: "product", "name": "Творог мягк Домик в деревне 5.5% 180г ван ДП 12X",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10316,7 +10397,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1295,
-                                    "name2": "Творог мягкий ДВД 0.1% 170г ванн СГ23 8Х",
+                                    type: "product", "name": "Творог мягкий ДВД 0.1% 170г ванн СГ23 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10324,7 +10405,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1296,
-                                    "name2": "Творог мягкий ДВД 0.1% 170г ванночка 8Х",
+                                    type: "product", "name": "Творог мягкий ДВД 0.1% 170г ванночка 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10332,7 +10413,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1297,
-                                    "name2": "Творог мягкий ДВД 0.1% 170г ванночка Х12",
+                                    type: "product", "name": "Творог мягкий ДВД 0.1% 170г ванночка Х12",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10340,7 +10421,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1298,
-                                    "name2": "Творог мягкий ДВД 5.5% 170г ванн СГ23 8Х",
+                                    type: "product", "name": "Творог мягкий ДВД 5.5% 170г ванн СГ23 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10348,7 +10429,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1299,
-                                    "name2": "Творог мягкий ДВД 5.5% 170г ванночка 12Х",
+                                    type: "product", "name": "Творог мягкий ДВД 5.5% 170г ванночка 12Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10356,7 +10437,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1300,
-                                    "name2": "Творог мягкий ДВД 5.5% 170г ванночка 8Х",
+                                    type: "product", "name": "Творог мягкий ДВД 5.5% 170г ванночка 8Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10367,11 +10448,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1301,
                             "name": "Творог Рассыпчатый",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1302,
-                                    "name2": "Творог рассыпч обезжир ДвД 0.2% 270г х6 пакет",
+                                    type: "product", "name": "Творог рассыпч обезжир ДвД 0.2% 270г х6 пакет",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "мешок",
@@ -10379,7 +10460,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1303,
-                                    "name2": "Творог рассыпч.обезжир КубБур 0.2% 350г х6 пакет",
+                                    type: "product", "name": "Творог рассыпч.обезжир КубБур 0.2% 350г х6 пакет",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПАКЕТ",
@@ -10387,7 +10468,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1304,
-                                    "name2": "Творог рассыпчатый ДвД 9% 270г х6 пакет",
+                                    type: "product", "name": "Творог рассыпчатый ДвД 9% 270г х6 пакет",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "мешок",
@@ -10395,7 +10476,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1305,
-                                    "name2": "Творог рассыпчатый КубБур 9% 350г х6 пакет",
+                                    type: "product", "name": "Творог рассыпчатый КубБур 9% 350г х6 пакет",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ПАКЕТ",
@@ -10406,11 +10487,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1306,
                             "name": "Творог Традиционный",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1307,
-                                    "name2": "ПМ Творог Ополье 0% 1х8х0.3кг вакуумн.упак.",
+                                    type: "product", "name": "ПМ Творог Ополье 0% 1х8х0.3кг вакуумн.упак.",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10418,7 +10499,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1308,
-                                    "name2": "Творог ДВД Дер Отбор 9% 170г х12 Ван",
+                                    type: "product", "name": "Творог ДВД Дер Отбор 9% 170г х12 Ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10426,7 +10507,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1309,
-                                    "name2": "Творог ДВД Обезжир 170г х12 Ван",
+                                    type: "product", "name": "Творог ДВД Обезжир 170г х12 Ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10434,7 +10515,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1310,
-                                    "name2": "Творог КубБуренка Обезжир 170г х12 Ван",
+                                    type: "product", "name": "Творог КубБуренка Обезжир 170г х12 Ван",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10442,7 +10523,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1311,
-                                    "name2": "Творог КубБуренка Отборн 9% 170г х12 Ван",
+                                    type: "product", "name": "Творог КубБуренка Отборн 9% 170г х12 Ван",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10450,7 +10531,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1312,
-                                    "name2": "Творог Кунгурский 0.5% 100г Ванночка",
+                                    type: "product", "name": "Творог Кунгурский 0.5% 100г Ванночка",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10458,7 +10539,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1313,
-                                    "name2": "Творог обезжирен Ополье 0.2% 170г х12 ванночка",
+                                    type: "product", "name": "Творог обезжирен Ополье 0.2% 170г х12 ванночка",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10466,7 +10547,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1314,
-                                    "name2": "Творог Ополье 5% 1х8х0.3кг вакуум.упак.",
+                                    type: "product", "name": "Творог Ополье 5% 1х8х0.3кг вакуум.упак.",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10474,7 +10555,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1315,
-                                    "name2": "Творог Ополье 9% 170г х12 ванночка",
+                                    type: "product", "name": "Творог Ополье 9% 170г х12 ванночка",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10482,7 +10563,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1316,
-                                    "name2": "Творог Ополье 9% 1х8х0.3кг вакуум.упак",
+                                    type: "product", "name": "Творог Ополье 9% 1х8х0.3кг вакуум.упак",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10490,7 +10571,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1317,
-                                    "name2": "Творог трад Веселый молочник 5% 1х10х180г флоуп",
+                                    type: "product", "name": "Творог трад Веселый молочник 5% 1х10х180г флоуп",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10498,7 +10579,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1318,
-                                    "name2": "МКК Творог Кунгурский 0.5% 400г пакет 20Х",
+                                    type: "product", "name": "МКК Творог Кунгурский 0.5% 400г пакет 20Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПАКЕТ",
@@ -10506,7 +10587,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1319,
-                                    "name2": "МКК Творог Кунгурский 5% 200г кашир.фольга",
+                                    type: "product", "name": "МКК Творог Кунгурский 5% 200г кашир.фольга",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ФОЛЬГА",
@@ -10514,7 +10595,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1320,
-                                    "name2": "МКК Творог обезжиренный Кунгурский 0% 500г весовой",
+                                    type: "product", "name": "МКК Творог обезжиренный Кунгурский 0% 500г весовой",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПАКЕТ",
@@ -10522,7 +10603,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1321,
-                                    "name2": "Творог Веселый молочник 0% 10х180г флоупак",
+                                    type: "product", "name": "Творог Веселый молочник 0% 10х180г флоупак",
                                     "level4": "ВЕСЕЛЫЙ МОЛОЧНИК",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10530,7 +10611,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1322,
-                                    "name2": "Творог ДВД Дер Отбор 9% 340г х6 Ван",
+                                    type: "product", "name": "Творог ДВД Дер Отбор 9% 340г х6 Ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10538,7 +10619,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1323,
-                                    "name2": "Творог ДВД Обезжир 340г х6 Ван",
+                                    type: "product", "name": "Творог ДВД Обезжир 340г х6 Ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10546,7 +10627,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1324,
-                                    "name2": "Творог Домик в деревне 9% 170г х6 ванн",
+                                    type: "product", "name": "Творог Домик в деревне 9% 170г х6 ванн",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10554,7 +10635,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1325,
-                                    "name2": "Творог КубБуренка Обезжир 340г х6 Ван",
+                                    type: "product", "name": "Творог КубБуренка Обезжир 340г х6 Ван",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10562,7 +10643,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1326,
-                                    "name2": "Творог КубБуренка Отборн 9% 340г х6 Ван",
+                                    type: "product", "name": "Творог КубБуренка Отборн 9% 340г х6 Ван",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10570,7 +10651,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1327,
-                                    "name2": "Творог Кунгурский 0.5% 200г Ванночка",
+                                    type: "product", "name": "Творог Кунгурский 0.5% 200г Ванночка",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10578,7 +10659,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1328,
-                                    "name2": "Творог Кунгурский 0.5% 300г Ванночка",
+                                    type: "product", "name": "Творог Кунгурский 0.5% 300г Ванночка",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10586,7 +10667,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1329,
-                                    "name2": "Творог Кунгурский 5% весовой",
+                                    type: "product", "name": "Творог Кунгурский 5% весовой",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПАКЕТ",
@@ -10594,7 +10675,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1330,
-                                    "name2": "Творог Кунгурский 9% 300г х24 ванночка",
+                                    type: "product", "name": "Творог Кунгурский 9% 300г х24 ванночка",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10602,7 +10683,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1331,
-                                    "name2": "Творог Кунгурский 9% 500г х20 весов",
+                                    type: "product", "name": "Творог Кунгурский 9% 500г х20 весов",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ПАКЕТ",
@@ -10610,7 +10691,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1332,
-                                    "name2": "Творог нежирный Кунгурский 0.5% 180г ДойПак 30Х",
+                                    type: "product", "name": "Творог нежирный Кунгурский 0.5% 180г ДойПак 30Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ДОЙ-ПАК",
@@ -10618,7 +10699,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1333,
-                                    "name2": "Творог нежирный Кунгурский 0.5% 500г ДойПак 16Х",
+                                    type: "product", "name": "Творог нежирный Кунгурский 0.5% 500г ДойПак 16Х",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "ДОЙ-ПАК",
@@ -10626,7 +10707,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1334,
-                                    "name2": "Творог обезжир Кубанская буренка 0.2% 170г х6 ванн",
+                                    type: "product", "name": "Творог обезжир Кубанская буренка 0.2% 170г х6 ванн",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10634,7 +10715,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1335,
-                                    "name2": "Творог обезжирен Домик в деревне 0.2% 170г х6 ван",
+                                    type: "product", "name": "Творог обезжирен Домик в деревне 0.2% 170г х6 ван",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10642,7 +10723,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1336,
-                                    "name2": "Творог обезжирен Ополье 0.2% 170г х6 ванночка",
+                                    type: "product", "name": "Творог обезжирен Ополье 0.2% 170г х6 ванночка",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10650,7 +10731,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1337,
-                                    "name2": "Творог обезжирен Ополье 0.2% 340г х6 ванночка",
+                                    type: "product", "name": "Творог обезжирен Ополье 0.2% 340г х6 ванночка",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10658,7 +10739,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1338,
-                                    "name2": "Творог Ополье 9% 170г х6 ванночка",
+                                    type: "product", "name": "Творог Ополье 9% 170г х6 ванночка",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10666,7 +10747,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1339,
-                                    "name2": "Творог Ополье 9% 340г х6 ванночка",
+                                    type: "product", "name": "Творог Ополье 9% 340г х6 ванночка",
                                     "level4": "ОПОЛЬЕ",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10674,7 +10755,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1340,
-                                    "name2": "Творог отборн КубБур 9% 170г х6 ван",
+                                    type: "product", "name": "Творог отборн КубБур 9% 170г х6 ван",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ЛОТОК ТЕРМОФОРМОВАННЫЙ",
@@ -10682,7 +10763,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1341,
-                                    "name2": "Творог традиц Домик в деревне 180г 0.2% флоуп 10Х",
+                                    type: "product", "name": "Творог традиц Домик в деревне 180г 0.2% флоуп 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10690,7 +10771,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1342,
-                                    "name2": "Творог традиц Кубанская буренка 0.2% 180г х10 флоуп",
+                                    type: "product", "name": "Творог традиц Кубанская буренка 0.2% 180г х10 флоуп",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10698,7 +10779,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1343,
-                                    "name2": "Творог традиц Кубанская буренка 9% 180г х10 флоуп",
+                                    type: "product", "name": "Творог традиц Кубанская буренка 9% 180г х10 флоуп",
                                     "level4": "КУБАНСКАЯ БУРЕНКА",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10706,7 +10787,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1344,
-                                    "name2": "Творог традиц ХуторокСолнышк 0.2% 180г х10 флоуп",
+                                    type: "product", "name": "Творог традиц ХуторокСолнышк 0.2% 180г х10 флоуп",
                                     "level4": "ЧАСТНАЯ МАРКА (ХУТОРОК СОЛНЫШКИНО)",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10714,7 +10795,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1345,
-                                    "name2": "Творог традиц ХуторокСолнышкино 9% 180г х10 флоуп",
+                                    type: "product", "name": "Творог традиц ХуторокСолнышкино 9% 180г х10 флоуп",
                                     "level4": "ЧАСТНАЯ МАРКА (ХУТОРОК СОЛНЫШКИНО)",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10722,7 +10803,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1346,
-                                    "name2": "Творог традици Домик в деревне 180г 5% флоуп 10Х",
+                                    type: "product", "name": "Творог традици Домик в деревне 180г 5% флоуп 10Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "ФЛОУПАК",
@@ -10733,11 +10814,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1347,
                             "name": "Творог Традиционный Зерненный",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1348,
-                                    "name2": "Творог зер Домик в деревне 5% 1х12х130г",
+                                    type: "product", "name": "Творог зер Домик в деревне 5% 1х12х130г",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -10745,7 +10826,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1349,
-                                    "name2": "Творог зер Домик в деревне 5% 1х12х350г",
+                                    type: "product", "name": "Творог зер Домик в деревне 5% 1х12х350г",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10753,7 +10834,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1350,
-                                    "name2": "Прод Твор ДВД Твор Зерно в Слив 5%130г х12 МСТ",
+                                    type: "product", "name": "Прод Твор ДВД Твор Зерно в Слив 5%130г х12 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -10761,7 +10842,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1351,
-                                    "name2": "Прод Твор ДВД Твор Зерно в Слив 5%350г х12 МСТ",
+                                    type: "product", "name": "Прод Твор ДВД Твор Зерно в Слив 5%350г х12 МСТ",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10772,11 +10853,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1352,
                             "name": "Творог Фруктовый",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1353,
-                                    "name2": "МКК Творожок Кунгурский 5% 200г мст",
+                                    type: "product", "name": "МКК Творожок Кунгурский 5% 200г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10789,16 +10870,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 1354,
                     "name": "Творожные Десерты",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 1355,
                             "name": "Творог Взбитый",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1356,
-                                    "name2": "Дес.тв паст взб Чудо Экзотич фрук 4.2%100г х16 ван",
+                                    type: "product", "name": "Дес.тв паст взб Чудо Экзотич фрук 4.2%100г х16 ван",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС-КИВИ-МАНГО",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10806,7 +10887,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1357,
-                                    "name2": "Десерт Твор паст взб Чудо Шок 5.2% 100гх16 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Шок 5.2% 100гх16 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ШОКОЛАД",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10814,7 +10895,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1358,
-                                    "name2": "Десерт Твор паст взб ЧудоКол ШокСуфВиш4%100гх16Ван",
+                                    type: "product", "name": "Десерт Твор паст взб ЧудоКол ШокСуфВиш4%100гх16Ван",
                                     "level4": "ЧУДО",
                                     "level5": "шоколад и вишневый",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10822,7 +10903,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1359,
-                                    "name2": "Десерт Твор паст взб ЧудоКол ШокСуфМал4%100гх16Ван",
+                                    type: "product", "name": "Десерт Твор паст взб ЧудоКол ШокСуфМал4%100гх16Ван",
                                     "level4": "ЧУДО",
                                     "level5": "МАЛИНА-ШОКОЛАД",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10830,7 +10911,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1360,
-                                    "name2": "Дес тв.паст взб Чудо Северн ягод 4.2% 100г х16 ван",
+                                    type: "product", "name": "Дес тв.паст взб Чудо Северн ягод 4.2% 100г х16 ван",
                                     "level4": "ЧУДО",
                                     "level5": "БРУСНИКА, КЛЮКВА, МОРОШКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10838,7 +10919,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1361,
-                                    "name2": "Десерт Твор паст взб Чудо Ананас 4.2%100гх16 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Ананас 4.2%100гх16 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10846,7 +10927,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1362,
-                                    "name2": "Десерт Твор паст взб Чудо Виш Череш 4%100г х12 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Виш Череш 4%100г х12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10854,7 +10935,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1363,
-                                    "name2": "Десерт Твор паст взб Чудо Вишня 4.2% 100г х12 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Вишня 4.2% 100г х12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10862,7 +10943,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1364,
-                                    "name2": "Десерт Твор паст взб Чудо Вишня 4.2% 100г х16 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Вишня 4.2% 100г х16 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10870,7 +10951,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1365,
-                                    "name2": "Десерт Твор паст взб Чудо ВишЧереш 4% 100гх16 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо ВишЧереш 4% 100гх16 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ВИШНЯ-ЧЕРЕШНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10878,7 +10959,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1366,
-                                    "name2": "Десерт Твор паст взб Чудо Киви Бан 4.2% 100гх16Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Киви Бан 4.2% 100гх16Ван",
                                     "level4": "ЧУДО",
                                     "level5": "БАНАН-КИВИ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10886,7 +10967,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1367,
-                                    "name2": "Десерт Твор паст взб Чудо Киви Бан 4.2%100гх12 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Киви Бан 4.2%100гх12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "БАНАН-КИВИ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10894,7 +10975,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1368,
-                                    "name2": "Десерт Твор паст взб Чудо Клуб 4.2% 100г х12 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Клуб 4.2% 100г х12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10902,7 +10983,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1369,
-                                    "name2": "Десерт Твор паст взб Чудо Клуб 4.2% 100г х16 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Клуб 4.2% 100г х16 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10910,7 +10991,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1370,
-                                    "name2": "Десерт Твор паст взб Чудо Клуб Земл 4% 100гх16 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Клуб Земл 4% 100гх16 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10918,7 +10999,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1371,
-                                    "name2": "Десерт Твор паст взб Чудо Клуб Земл 4%100г х12 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Клуб Земл 4%100г х12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10926,7 +11007,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1372,
-                                    "name2": "Десерт Твор паст взб Чудо Перс Груш4.2% 100гх12Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Перс Груш4.2% 100гх12Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-ГРУША",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10934,7 +11015,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1373,
-                                    "name2": "Десерт Твор паст взб Чудо Перс Груш4.2% 100гх16Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Перс Груш4.2% 100гх16Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-ГРУША",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10942,7 +11023,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1374,
-                                    "name2": "Десерт Твор паст взб Чудо ПерсМарк 4.2% 100гх16Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо ПерсМарк 4.2% 100гх16Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК-МАРАКУЙЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10950,7 +11031,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1375,
-                                    "name2": "Десерт Твор паст взб Чудо Черника 4.2% 100г х16Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Черника 4.2% 100г х16Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10958,7 +11039,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1376,
-                                    "name2": "Десерт Твор паст взб Чудо Черника 4.2% 100гх12 Ван",
+                                    type: "product", "name": "Десерт Твор паст взб Чудо Черника 4.2% 100гх12 Ван",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10966,7 +11047,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1377,
-                                    "name2": "ДесТворВзб Чудо Гавайский Микс 4.2% 100г ванн 16Х",
+                                    type: "product", "name": "ДесТворВзб Чудо Гавайский Микс 4.2% 100г ванн 16Х",
                                     "level4": "ЧУДО",
                                     "level5": "АНАНАС, МАНГО, ЧИА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10974,7 +11055,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1378,
-                                    "name2": "ДесТворВзб Чудо Клубн 5.8% 85г Ван 12Х",
+                                    type: "product", "name": "ДесТворВзб Чудо Клубн 5.8% 85г Ван 12Х",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10982,7 +11063,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1379,
-                                    "name2": "ДесТворВзб Чудо Персик 5.8% 85г Ван 12Х",
+                                    type: "product", "name": "ДесТворВзб Чудо Персик 5.8% 85г Ван 12Х",
                                     "level4": "ЧУДО",
                                     "level5": "ПЕРСИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10990,7 +11071,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1380,
-                                    "name2": "ДесТворВзб Чудо Черника 5.8% 85г Ван 12Х",
+                                    type: "product", "name": "ДесТворВзб Чудо Черника 5.8% 85г Ван 12Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -10998,7 +11079,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1381,
-                                    "name2": "ДесТворВзб ЧудоГолубБруснКняжени 4.2% 100г Ван 16Х",
+                                    type: "product", "name": "ДесТворВзб ЧудоГолубБруснКняжени 4.2% 100г Ван 16Х",
                                     "level4": "ЧУДО",
                                     "level5": "ГОЛУБИКА, БРУСНИКА, КНЯЖЕНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11006,7 +11087,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1382,
-                                    "name2": "ДесТворВзбит Чудо МорожЯгодн 5.8% 85г ванн 12Х",
+                                    type: "product", "name": "ДесТворВзбит Чудо МорожЯгодн 5.8% 85г ванн 12Х",
                                     "level4": "ЧУДО",
                                     "level5": "ЯГОДНОЕ МОРОЖЕНОЕ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11014,7 +11095,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1383,
-                                    "name2": "ДесТворВзбПаст Чудо МалЕжевика 4.2% 100г ван 16Х",
+                                    type: "product", "name": "ДесТворВзбПаст Чудо МалЕжевика 4.2% 100г ван 16Х",
                                     "level4": "ЧУДО",
                                     "level5": "МАЛИНА, ЕЖЕВИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11022,7 +11103,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1384,
-                                    "name2": "Творог взб Чудо Ассорти 4-4.2% 100г Ванн",
+                                    type: "product", "name": "Творог взб Чудо Ассорти 4-4.2% 100г Ванн",
                                     "level4": "ЧУДО",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11030,7 +11111,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1385,
-                                    "name2": "Творог взбитый Чудо Яг ассорти 4.0% 100г сотруд",
+                                    type: "product", "name": "Творог взбитый Чудо Яг ассорти 4.0% 100г сотруд",
                                     "level4": "ЧУДО",
                                     "level5": "",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11041,11 +11122,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1386,
                             "name": "Творог Мягкий",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1387,
-                                    "name2": "МКК Творог мягкий Кунгурский 1% 130г мст",
+                                    type: "product", "name": "МКК Творог мягкий Кунгурский 1% 130г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11053,7 +11134,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1388,
-                                    "name2": "МКК Творог мягкий Кунгурский 5% 130г мст",
+                                    type: "product", "name": "МКК Творог мягкий Кунгурский 5% 130г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11064,11 +11145,11 @@ export const productsCategoriesTree : Node[]=
                         {
                             "id": 1389,
                             "name": "Творог Фруктовый",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1390,
-                                    "name2": "МКК Творожок Кунгурский 5% 500г мст",
+                                    type: "product", "name": "МКК Творожок Кунгурский 5% 500г мст",
                                     "level4": "КУНГУРСКИЙ",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11076,7 +11157,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1391,
-                                    "name2": "Прод Твор паст Чудо Клуб Земл 5.4%135г х12 ВанКрг",
+                                    type: "product", "name": "Прод Твор паст Чудо Клуб Земл 5.4%135г х12 ВанКрг",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11084,7 +11165,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1392,
-                                    "name2": "Прод твор пастер Чудо-твор черн-мал 5.4% 1х12х135г",
+                                    type: "product", "name": "Прод твор пастер Чудо-твор черн-мал 5.4% 1х12х135г",
                                     "level4": "ЧУДО",
                                     "level5": "ЧЕРНИКА, МАЛИНА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11092,7 +11173,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1393,
-                                    "name2": "Продукт Твор паст ЧудоКол ШокАп 5.5%135гх12 ВанК",
+                                    type: "product", "name": "Продукт Твор паст ЧудоКол ШокАп 5.5%135гх12 ВанК",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "ШОКОЛАД, АПЕЛЬСИН",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11100,7 +11181,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1394,
-                                    "name2": "Продукт Твор паст ЧудоКол ШокКок 5.6%135гх12 ВанК",
+                                    type: "product", "name": "Продукт Твор паст ЧудоКол ШокКок 5.6%135гх12 ВанК",
                                     "level4": "ЧУДО КОЛЛЕКЦИЯ",
                                     "level5": "ШОКОЛАД, КОКОС",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11108,7 +11189,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1395,
-                                    "name2": "Продукт Твор пастер Чудо Ван Шок 5.6% 315г х8 МСТ",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Ван Шок 5.6% 315г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ-ШОКОЛАД",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11116,7 +11197,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1396,
-                                    "name2": "Продукт Твор пастер Чудо Виш Шок 5.6% 315г х8 МСТ",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Виш Шок 5.6% 315г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "шоколад и вишневый",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11124,7 +11205,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1397,
-                                    "name2": "Продукт Твор пастер Чудо Киви 5.4% 135г х12 ВанК",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Киви 5.4% 135г х12 ВанК",
                                     "level4": "ЧУДО",
                                     "level5": "КИВИ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11132,7 +11213,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1398,
-                                    "name2": "Продукт Твор пастер Чудо Клуб Земл 5.4% 335гх8 МСТ",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Клуб Земл 5.4% 335гх8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11140,7 +11221,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1399,
-                                    "name2": "Продукт Твор пастер Чудо Курага 5.4% 290г х8 МСТ",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Курага 5.4% 290г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "КУРАГА",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11148,7 +11229,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1400,
-                                    "name2": "Продукт Твор пастер Чудо Курага 5.4% 335г х8 МСТ",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Курага 5.4% 335г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "КУРАГА",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11156,7 +11237,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1401,
-                                    "name2": "Творог Фрукт ЧудоДетки Груш Перс 3,6%100гх12Ван ДП",
+                                    type: "product", "name": "Творог Фрукт ЧудоДетки Груш Перс 3,6%100гх12Ван ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ГРУША-ПЕРСИК",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11164,7 +11245,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1402,
-                                    "name2": "Творог Фрукт ЧудоДетки Клуб 3,6% 100г х12 Ван ДП",
+                                    type: "product", "name": "Творог Фрукт ЧудоДетки Клуб 3,6% 100г х12 Ван ДП",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11172,7 +11253,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1403,
-                                    "name2": "Паста мол с тв крем Чудо-тв дын-манг 5.4%1х16х125г",
+                                    type: "product", "name": "Паста мол с тв крем Чудо-тв дын-манг 5.4%1х16х125г",
                                     "level4": "ЧУДО",
                                     "level5": "ДЫНЯ, МАНГО",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11180,7 +11261,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1404,
-                                    "name2": "Прод.творож с шоколадом Чудо АССОРТИ 5,6% 290г х8",
+                                    type: "product", "name": "Прод.творож с шоколадом Чудо АССОРТИ 5,6% 290г х8",
                                     "level4": "ЧУДО",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11188,7 +11269,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1405,
-                                    "name2": "Продукт Твор пастер Чудо Ван Шок 5.6% 290г х8 МСТ",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Ван Шок 5.6% 290г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "ВАНИЛЬ-ШОКОЛАД",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11196,7 +11277,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1406,
-                                    "name2": "Продукт Твор пастер Чудо Виш Шок 5.6% 290г х8 МСТ",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Виш Шок 5.6% 290г х8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "шоколад и вишневый",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11204,7 +11285,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1407,
-                                    "name2": "Продукт Твор пастер Чудо Клуб Земл 5.4%290гх8 МСТ",
+                                    type: "product", "name": "Продукт Твор пастер Чудо Клуб Земл 5.4%290гх8 МСТ",
                                     "level4": "ЧУДО",
                                     "level5": "КЛУБНИКА-ЗЕМЛЯНИКА",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11212,7 +11293,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1408,
-                                    "name2": "Продукт творожный Чудо АССОРТИ 5,4% 290г х8",
+                                    type: "product", "name": "Продукт творожный Чудо АССОРТИ 5,4% 290г х8",
                                     "level4": "ЧУДО",
                                     "level5": "",
                                     "level6": "МОНОСТАКАН  ПРЕДФОРМОВАННЫЙ",
@@ -11220,7 +11301,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1409,
-                                    "name2": "Твор фр ЧудоДет Вкусомаг МалЕжев 3.8% 100г Ван 6Х",
+                                    type: "product", "name": "Твор фр ЧудоДет Вкусомаг МалЕжев 3.8% 100г Ван 6Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "МАЛИНА, ЕЖЕВИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11228,7 +11309,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1410,
-                                    "name2": "Твор фр ЧудоДетки Вкусомаг ЯблБан 3.8% 100г Ван 6Х",
+                                    type: "product", "name": "Твор фр ЧудоДетки Вкусомаг ЯблБан 3.8% 100г Ван 6Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "ЯБЛОКО-БАНАН",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11236,7 +11317,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1411,
-                                    "name2": "ТворогФруктДвусл ДвД Вишня 4.6% 125г ванн 16Х",
+                                    type: "product", "name": "ТворогФруктДвусл ДвД Вишня 4.6% 125г ванн 16Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "ВИШНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11244,7 +11325,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1412,
-                                    "name2": "ТворогФруктДвусл ДвД Клубника 4.6% 125г ванн 16Х",
+                                    type: "product", "name": "ТворогФруктДвусл ДвД Клубника 4.6% 125г ванн 16Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "КЛУБНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11252,7 +11333,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1413,
-                                    "name2": "ТворогФруктДвусл ДвД Черника 4.6% 125г ванн 16Х",
+                                    type: "product", "name": "ТворогФруктДвусл ДвД Черника 4.6% 125г ванн 16Х",
                                     "level4": "ДОМИК В ДЕРЕВНЕ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11260,7 +11341,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1414,
-                                    "name2": "ТворФр ЧудоДет Вкусомаг КлубДыня 3.8% 100г Ван 6Х",
+                                    type: "product", "name": "ТворФр ЧудоДет Вкусомаг КлубДыня 3.8% 100г Ван 6Х",
                                     "level4": "ЧУДО ДЕТКИ",
                                     "level5": "КЛУБНИКА И ДЫНЯ",
                                     "level6": "СТАКАН ТЕРМОФОРМОВАННЫЙ",
@@ -11273,16 +11354,16 @@ export const productsCategoriesTree : Node[]=
                 {
                     "id": 1415,
                     "name": "Функциональные Продукты",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 1416,
                             "name": "Функциональные Напитки",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1417,
-                                    "name2": "Нап к/м с сок Имунеле Землян 1.2% 100г х24 Клиника",
+                                    type: "product", "name": "Нап к/м с сок Имунеле Землян 1.2% 100г х24 Клиника",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -11290,7 +11371,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1418,
-                                    "name2": "Нап к/м с сок Имунеле Мали-морош 1.2% 100г х48 БП",
+                                    type: "product", "name": "Нап к/м с сок Имунеле Мали-морош 1.2% 100г х48 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "МАЛИНА-МОРОШКА",
                                     "level6": "ПЭТ",
@@ -11298,7 +11379,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1419,
-                                    "name2": "Нап к/м с сок Имунеле Мультиф 1.2% 100г х24 Клиник",
+                                    type: "product", "name": "Нап к/м с сок Имунеле Мультиф 1.2% 100г х24 Клиник",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ПЭТ",
@@ -11306,7 +11387,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1420,
-                                    "name2": "Нап к/м с сок Имунеле Черни 1,2% 100г х24 Клиник",
+                                    type: "product", "name": "Нап к/м с сок Имунеле Черни 1,2% 100г х24 Клиник",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ПЭТ",
@@ -11314,7 +11395,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1421,
-                                    "name2": "Нап к/м с сок Имунеле Черник 1,2% 24х100г БП (2х4)",
+                                    type: "product", "name": "Нап к/м с сок Имунеле Черник 1,2% 24х100г БП (2х4)",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ПЭТ",
@@ -11322,7 +11403,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1422,
-                                    "name2": "Нап к/м фр Имунеле forKids ЯблБан 1.5% 100г х48 БП",
+                                    type: "product", "name": "Нап к/м фр Имунеле forKids ЯблБан 1.5% 100г х48 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "ЯБЛОКО, БАНАН",
                                     "level6": "ПЭТ",
@@ -11330,7 +11411,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1423,
-                                    "name2": "Нап кисмол Имунеле Брусника Шипов 1.2% 100г х24 БП100г",
+                                    type: "product", "name": "Нап кисмол Имунеле Брусника Шипов 1.2% 100г х24 БП100г",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "БРУСНИКА-ШИПОВНИК",
                                     "level6": "ПЭТ",
@@ -11338,7 +11419,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1424,
-                                    "name2": "Нап кисмол Имунеле Брусника Шипов 1.2% 100гх48БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Брусника Шипов 1.2% 100гх48БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "БРУСНИКА-ШИПОВНИК",
                                     "level6": "ПЭТ",
@@ -11346,7 +11427,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1425,
-                                    "name2": "Нап кисмол Имунеле Гранат 1.2% 100г х48 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Гранат 1.2% 100г х48 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ГРАНАТ",
                                     "level6": "ПЭТ",
@@ -11354,7 +11435,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1426,
-                                    "name2": "Нап кисмол Имунеле ГрецОрех 1.2% 200гх24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле ГрецОрех 1.2% 200гх24 БП",
                                     "level4": "ИМУНЕЛЕ FOR MEN",
                                     "level5": "ГРЕЦКИЙ ОРЕХ",
                                     "level6": "ПЭТ",
@@ -11362,7 +11443,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1427,
-                                    "name2": "Нап кисмол Имунеле Землян 1.2% 100г х12 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Землян 1.2% 100г х12 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -11370,7 +11451,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1428,
-                                    "name2": "Нап кисмол Имунеле Землян 1.2% 100г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Землян 1.2% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -11378,7 +11459,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1429,
-                                    "name2": "Нап кисмол Имунеле Землян 1.2% 100г х48 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Землян 1.2% 100г х48 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -11386,7 +11467,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1430,
-                                    "name2": "Нап кисмол Имунеле Классич 1.2% 100г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Классич 1.2% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -11394,7 +11475,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1431,
-                                    "name2": "Нап кисмол Имунеле Классич 1.2% 100г х48 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Классич 1.2% 100г х48 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "",
                                     "level6": "ПЭТ",
@@ -11402,7 +11483,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1432,
-                                    "name2": "Нап кисмол Имунеле Кокос 1.2% 200г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Кокос 1.2% 200г х24 БП",
                                     "level4": "ИМУНЕЛЕ FOR MEN",
                                     "level5": "КОКОСОВЫЙ",
                                     "level6": "ПЭТ",
@@ -11410,7 +11491,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1433,
-                                    "name2": "Нап кисмол Имунеле Кофе 1.2% 200г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Кофе 1.2% 200г х24 БП",
                                     "level4": "ИМУНЕЛЕ FOR MEN",
                                     "level5": "КОФЕ",
                                     "level6": "ПЭТ",
@@ -11418,7 +11499,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1434,
-                                    "name2": "Нап кисмол Имунеле ЛесЯг 1.2% 100г х12 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле ЛесЯг 1.2% 100г х12 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "ПЭТ",
@@ -11426,7 +11507,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1435,
-                                    "name2": "Нап кисмол Имунеле ЛесЯг 1.2% 100г х48 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле ЛесЯг 1.2% 100г х48 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "ПЭТ",
@@ -11434,7 +11515,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1436,
-                                    "name2": "Нап кисмол Имунеле МультФр 1.2% 100г х12 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле МультФр 1.2% 100г х12 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ПЭТ",
@@ -11442,7 +11523,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1437,
-                                    "name2": "Нап кисмол Имунеле МультФр 1.2% 100г х48 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле МультФр 1.2% 100г х48 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ПЭТ",
@@ -11450,7 +11531,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1438,
-                                    "name2": "Нап кисмол Имунеле Черника 1.2% 100г х12 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Черника 1.2% 100г х12 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ПЭТ",
@@ -11458,7 +11539,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1439,
-                                    "name2": "Нап кисмол Имунеле Черника 1.2% 100г х48 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Черника 1.2% 100г х48 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ПЭТ",
@@ -11466,7 +11547,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1440,
-                                    "name2": "Нап кисмол Имунеле Чсмор КрСмор 1.2%100г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Чсмор КрСмор 1.2%100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "СМОРОДИНА ЧЕРНАЯ-СМОРОДИНА КРАСНАЯ",
                                     "level6": "ПЭТ",
@@ -11474,7 +11555,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1441,
-                                    "name2": "Нап кисмол Имунеле Чсмор КрСмор 1.2%100гх48 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Чсмор КрСмор 1.2%100гх48 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "СМОРОДИНА ЧЕРНАЯ-СМОРОДИНА КРАСНАЯ",
                                     "level6": "ПЭТ",
@@ -11482,7 +11563,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1442,
-                                    "name2": "Нап кисмол сок Имунеле forKids ТутФр1.5%100гх12 БП",
+                                    type: "product", "name": "Нап кисмол сок Имунеле forKids ТутФр1.5%100гх12 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "ТУТТИ-ФРУТТИ",
                                     "level6": "ПЭТ",
@@ -11490,7 +11571,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1443,
-                                    "name2": "Нап кисмол сок Имунеле forKids ТутФр1.5%100гх48 БП",
+                                    type: "product", "name": "Нап кисмол сок Имунеле forKids ТутФр1.5%100гх48 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "ТУТТИ-ФРУТТИ",
                                     "level6": "ПЭТ",
@@ -11498,7 +11579,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1444,
-                                    "name2": "Нап кисмол сок Имунеле forKids ЯгБум1.5%100гх48 БП",
+                                    type: "product", "name": "Нап кисмол сок Имунеле forKids ЯгБум1.5%100гх48 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "КЛЮКВА, ЕЖЕВИКА",
                                     "level6": "ПЭТ",
@@ -11506,7 +11587,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1445,
-                                    "name2": "Нап кисмол сок ИмунелеforKids МалПл 1.5%100гх12 БП",
+                                    type: "product", "name": "Нап кисмол сок ИмунелеforKids МалПл 1.5%100гх12 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "МАЛИНА, ПЛОМБИР",
                                     "level6": "ПЭТ",
@@ -11514,7 +11595,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1446,
-                                    "name2": "Нап кисмол сок ИмунелеforKids МалПл 1.5%100гх48 БП",
+                                    type: "product", "name": "Нап кисмол сок ИмунелеforKids МалПл 1.5%100гх48 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "МАЛИНА, ПЛОМБИР",
                                     "level6": "ПЭТ",
@@ -11522,7 +11603,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1447,
-                                    "name2": "Напит к/м с сок Имунеле Крас виногр 200г х24 БП",
+                                    type: "product", "name": "Напит к/м с сок Имунеле Крас виногр 200г х24 БП",
                                     "level4": "ИМУНЕЛЕ FOR MEN",
                                     "level5": "ВИНОГРАД КРАСНЫЙ",
                                     "level6": "ПЭТ",
@@ -11530,7 +11611,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1448,
-                                    "name2": "Имунеле СилаФрук НапКисМол КлубнБан 1% 100г БП 24Х",
+                                    type: "product", "name": "Имунеле СилаФрук НапКисМол КлубнБан 1% 100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "КЛУБНИКА И БАНАН",
                                     "level6": "ПЭТ",
@@ -11538,7 +11619,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1449,
-                                    "name2": "Имунеле СилаФрук НапКисМол Манго 1% 100г БП 24Х",
+                                    type: "product", "name": "Имунеле СилаФрук НапКисМол Манго 1% 100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "МАНГО",
                                     "level6": "ПЭТ",
@@ -11546,7 +11627,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1450,
-                                    "name2": "Имунеле СилаФрук НапКисМол Персик 1%100г БП 24Х",
+                                    type: "product", "name": "Имунеле СилаФрук НапКисМол Персик 1%100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ПЕРСИК",
                                     "level6": "ПЭТ",
@@ -11554,7 +11635,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1451,
-                                    "name2": "Нап к/м с сок Имунеле Мал-морошка 1.2% 100г х24 БП",
+                                    type: "product", "name": "Нап к/м с сок Имунеле Мал-морошка 1.2% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "МАЛИНА-МОРОШКА",
                                     "level6": "ПЭТ",
@@ -11562,7 +11643,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1452,
-                                    "name2": "Нап к/м фр Имунеле Kids Ябл-Бан 1.5% 100г х24 БП",
+                                    type: "product", "name": "Нап к/м фр Имунеле Kids Ябл-Бан 1.5% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "ЯБЛОКО, БАНАН",
                                     "level6": "ПЭТ",
@@ -11570,7 +11651,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1453,
-                                    "name2": "Нап к/м фр Имунеле СилаФрук ЯБлоко 1% 100г БП 24Х",
+                                    type: "product", "name": "Нап к/м фр Имунеле СилаФрук ЯБлоко 1% 100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ПЭТ",
@@ -11578,7 +11659,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1454,
-                                    "name2": "Нап кисмол Имунеле Гранат 1.2% 100г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Гранат 1.2% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ГРАНАТ",
                                     "level6": "ПЭТ",
@@ -11586,7 +11667,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1455,
-                                    "name2": "Нап кисмол Имунеле Землян 1.2% 100г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Землян 1.2% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЗЕМЛЯНИКА",
                                     "level6": "ПЭТ",
@@ -11594,7 +11675,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1456,
-                                    "name2": "Нап кисмол Имунеле ЛесЯг 1.2% 100г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле ЛесЯг 1.2% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЯГОДЫ ЛЕСНЫЕ",
                                     "level6": "ПЭТ",
@@ -11602,7 +11683,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1457,
-                                    "name2": "Нап кисмол Имунеле МультФр 1.2% 100г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле МультФр 1.2% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "МУЛЬТИФРУКТ",
                                     "level6": "ПЭТ",
@@ -11610,7 +11691,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1458,
-                                    "name2": "Нап кисмол Имунеле Черника 1.2% 100г х24 БП",
+                                    type: "product", "name": "Нап кисмол Имунеле Черника 1.2% 100г х24 БП",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ЧЕРНИКА",
                                     "level6": "ПЭТ",
@@ -11618,7 +11699,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1459,
-                                    "name2": "Нап КисМол с сок Имунеле Кофе 1.2% 100г БП 24Х",
+                                    type: "product", "name": "Нап КисМол с сок Имунеле Кофе 1.2% 100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "КОФЕ",
                                     "level6": "ПЭТ",
@@ -11626,7 +11707,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1460,
-                                    "name2": "Нап кисмол сок Имунеле forKids ТутФр1.5%100гх24 БП",
+                                    type: "product", "name": "Нап кисмол сок Имунеле forKids ТутФр1.5%100гх24 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "ТУТТИ-ФРУТТИ",
                                     "level6": "ПЭТ",
@@ -11634,7 +11715,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1461,
-                                    "name2": "Нап кисмол сок Имунеле forKids ЯгБум1.5%100гх24 БП",
+                                    type: "product", "name": "Нап кисмол сок Имунеле forKids ЯгБум1.5%100гх24 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "КЛЮКВА, ЕЖЕВИКА",
                                     "level6": "ПЭТ",
@@ -11642,7 +11723,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1462,
-                                    "name2": "Нап кисмол сок ИмунелеforKids МалПл 1.5%100гх24 БП",
+                                    type: "product", "name": "Нап кисмол сок ИмунелеforKids МалПл 1.5%100гх24 БП",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "МАЛИНА, ПЛОМБИР",
                                     "level6": "ПЭТ",
@@ -11650,7 +11731,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1463,
-                                    "name2": "Напиток к/м Имунеле Neo виш 1.2% 1х48х6х100г",
+                                    type: "product", "name": "Напиток к/м Имунеле Neo виш 1.2% 1х48х6х100г",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ВИШНЯ",
                                     "level6": "ПЭТ",
@@ -11658,7 +11739,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1464,
-                                    "name2": "Напиток к/м Имунеле Neo гран-виш 1.2% 1х8х6х100г",
+                                    type: "product", "name": "Напиток к/м Имунеле Neo гран-виш 1.2% 1х8х6х100г",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ГРАНАТ, ВИШНЯ",
                                     "level6": "ПЭТ",
@@ -11666,7 +11747,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1465,
-                                    "name2": "НапКисМол сок Имунеле СибирИммунит1.2% 100г БП 24Х",
+                                    type: "product", "name": "НапКисМол сок Имунеле СибирИммунит1.2% 100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "КЛЮКВА, МОРОШКА, ЖИМОЛОСТЬ",
                                     "level6": "ПЭТ",
@@ -11674,7 +11755,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1466,
-                                    "name2": "НапКисМолСок Имунеле ПерсМангДыня 1.2%100г БП 24Х",
+                                    type: "product", "name": "НапКисМолСок Имунеле ПерсМангДыня 1.2%100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ",
                                     "level5": "ПЕРСИК, МАНГО, ДЫНЯ",
                                     "level6": "ПЭТ",
@@ -11682,7 +11763,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1467,
-                                    "name2": "НапКисМолФр ИмунелеKids ВолшебЛес 1.5% 100г БП 24Х",
+                                    type: "product", "name": "НапКисМолФр ИмунелеKids ВолшебЛес 1.5% 100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "ЗЕМЛЯНИКА, ЧЕРНИКА, БРУСНИКА",
                                     "level6": "ПЭТ",
@@ -11690,7 +11771,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1468,
-                                    "name2": "НапКисМолФр ИмунелеKids КлубнМорож 1.5%100г БП 24Х",
+                                    type: "product", "name": "НапКисМолФр ИмунелеKids КлубнМорож 1.5%100г БП 24Х",
                                     "level4": "ИМУНЕЛЕ FOR KIDS",
                                     "level5": "КЛУБНИКА МОРОЖЕНОЕ",
                                     "level6": "ПЭТ",
@@ -11705,21 +11786,21 @@ export const productsCategoriesTree : Node[]=
         {
             "id": 1469,
             "name": "Негазированные Напитки",
-            "level": 0,
+            "level": 0, type: "nodes",
             "nodes": [
                 {
                     "id": 1470,
                     "name": "Соки Охлажденные",
-                    "level": 1,
+                    "level": 1, type: "nodes",
                     "nodes": [
                         {
                             "id": 1471,
                             "name": "Соки Охлажденные",
-                            "level": 2,
+                            "level": 2, type: "products",
                             "products": [
                                 {
                                     "id": 1472,
-                                    "name2": "ПродПит с мяк J7 БанВишЯблВиногр 0.3л ПЭТ 6Х",
+                                    type: "product", "name": "ПродПит с мяк J7 БанВишЯблВиногр 0.3л ПЭТ 6Х",
                                     "level4": "ДЖЕЙ7",
                                     "level5": "БАНАН, ВИШНЯ, ЯБЛОКО, ВИНОГРАД",
                                     "level6": "ПЭТ",
@@ -11727,7 +11808,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1473,
-                                    "name2": "ПродПит с мяк J7 БанВишЯблВиногр 0.7л ПЭТ 6Х",
+                                    type: "product", "name": "ПродПит с мяк J7 БанВишЯблВиногр 0.7л ПЭТ 6Х",
                                     "level4": "ДЖЕЙ7",
                                     "level5": "БАНАН, ВИШНЯ, ЯБЛОКО, ВИНОГРАД",
                                     "level6": "ПЭТ",
@@ -11735,7 +11816,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1474,
-                                    "name2": "ПродПит с мяк J7 ПерсЯблМанг 0.3л ПЭТ 6Х",
+                                    type: "product", "name": "ПродПит с мяк J7 ПерсЯблМанг 0.3л ПЭТ 6Х",
                                     "level4": "ДЖЕЙ7",
                                     "level5": "МАНГО, ПЕРСИК, ЯБЛОКО",
                                     "level6": "ПЭТ",
@@ -11743,7 +11824,7 @@ export const productsCategoriesTree : Node[]=
                                 },
                                 {
                                     "id": 1475,
-                                    "name2": "ПродПит с мяк J7 Яблоко 0.3л ПЭТ 6Х",
+                                    type: "product", "name": "ПродПит с мяк J7 Яблоко 0.3л ПЭТ 6Х",
                                     "level4": "ДЖЕЙ7",
                                     "level5": "ЯБЛОКО",
                                     "level6": "ПЭТ",

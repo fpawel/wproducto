@@ -79,55 +79,57 @@ export default class Login extends React.Component<{}, State> {
         }
 
         return (
-            <Jumbotron>
+            <Container>
+                <Jumbotron>
 
-                <h1 style={{
-                    fontSize: "34px",
-                    fontWeight: "bold",
-                }}
-                > Вход </h1>
-                <hr/>
+                    <h1 style={{
+                        fontSize: "34px",
+                        fontWeight: "bold",
+                    }}
+                    > Вход </h1>
+                    <hr/>
 
-                <Form style={{
-                    margin: "10px auto",
-                    maxWidth: "400px",
-                    border: "3px solid lightsteelblue",
-                    background: "lightcyan",
-                    borderRadius: "15px",
-                    padding: "40px",
-                }}>
-                    <Form.Group as={Row} >
-                        <FormLabel>Имя или email</FormLabel>
-                        <Form.Control type="input" placeholder="Имя пользователя или email"
-                                      value={this.state.name}
-                                      onChange={this.handleInputName} />
-                    </Form.Group>
+                    <Form style={{
+                        margin: "10px auto",
+                        maxWidth: "400px",
+                        border: "3px solid lightsteelblue",
+                        background: "lightcyan",
+                        borderRadius: "15px",
+                        padding: "40px",
+                    }}>
+                        <Form.Group as={Row} >
+                            <FormLabel>Имя или email</FormLabel>
+                            <Form.Control type="input" placeholder="Имя пользователя или email"
+                                          value={this.state.name}
+                                          onChange={this.handleInputName} />
+                        </Form.Group>
 
-                    <Form.Group as={Row} >
-                        <FormLabel>Пароль</FormLabel>
-                        <Form.Control type="password" placeholder="Пароль"
-                                      value={this.state.pass}
-                                      onChange={this.handleInputPassword} />
-                    </Form.Group>
+                        <Form.Group as={Row} >
+                            <FormLabel>Пароль</FormLabel>
+                            <Form.Control type="password" placeholder="Пароль"
+                                          value={this.state.pass}
+                                          onChange={this.handleInputPassword} />
+                        </Form.Group>
 
-                    <LoginButton onClick={this.handleClick} />
-
-
-                    <Link to="/register" >
-                        Ещё не зарегестрированы?
-                    </Link>
-                </Form>
-
-                { error ?
-                    (
-                        <Alert variant='danger' style={{ marginTop: "20px" }}>
-                            {error}
-                        </Alert>
-                    ) : null
-                }
+                        <LoginButton onClick={this.handleClick} />
 
 
-            </Jumbotron>
+                        <Link to="/register" >
+                            Ещё не зарегестрированы?
+                        </Link>
+                    </Form>
+
+                    { error ?
+                        (
+                            <Alert variant='danger' style={{ marginTop: "20px" }}>
+                                {error}
+                            </Alert>
+                        ) : null
+                    }
+
+
+                </Jumbotron>
+            </Container>
         );
     }
 }

@@ -86,86 +86,89 @@ export default class Register extends React.Component<{}, State> {
         let { name, email, pass, passAgain, error } = this.state;
 
         return (
-            <Jumbotron>
+            <Container>
+                <Jumbotron>
 
-                <h1 style={{
-                    fontSize: "34px",
-                    fontWeight: "bold",
-                }}
-                > Регистрация </h1>
-                <hr/>
+                    <h1 style={{
+                        fontSize: "34px",
+                        fontWeight: "bold",
+                    }}
+                    > Регистрация </h1>
+                    <hr/>
 
-                <Form style={{
-                    margin: "0 auto",
-                    maxWidth: "400px",
-                    border: "3px solid lightsteelblue",
-                    background: "lightcyan",
-                    borderRadius: "15px",
-                    padding: "40px",
-                }}>
+                    <Form style={{
+                        margin: "0 auto",
+                        maxWidth: "400px",
+                        border: "3px solid lightsteelblue",
+                        background: "lightcyan",
+                        borderRadius: "15px",
+                        padding: "40px",
+                    }}>
 
-                    <Form.Group as={Row} >
-                        <FormLabel>Имя пользователя</FormLabel>
-                        <Form.Control type="name" placeholder="Имя пользователя"
-                                      required onChange={this.handleInputName}
-                                      value={name}
-                        />
-                    </Form.Group>
+                        <Form.Group as={Row} >
+                            <FormLabel>Имя пользователя</FormLabel>
+                            <Form.Control type="name" placeholder="Имя пользователя"
+                                          required onChange={this.handleInputName}
+                                          value={name}
+                            />
+                        </Form.Group>
 
-                    <Form.Group as={Row} >
-                        <FormLabel>Адрес электронной почты</FormLabel>
-                        <Form.Control type="email" placeholder="Имя пользователя или email"
-                                      required onChange={this.handleInputEmail}
-                                      value={email} />
-                    </Form.Group>
+                        <Form.Group as={Row} >
+                            <FormLabel>Адрес электронной почты</FormLabel>
+                            <Form.Control type="email" placeholder="Имя пользователя или email"
+                                          required onChange={this.handleInputEmail}
+                                          value={email} />
+                        </Form.Group>
 
-                    <Form.Group as={Row} >
-                        <FormLabel>Пароль</FormLabel>
-                        <Form.Control type="password" placeholder="Пароль"
-                                      value={pass}
-                                      required onChange={this.handleInputPassword} />
-                    </Form.Group>
+                        <Form.Group as={Row} >
+                            <FormLabel>Пароль</FormLabel>
+                            <Form.Control type="password" placeholder="Пароль"
+                                          value={pass}
+                                          required onChange={this.handleInputPassword} />
+                        </Form.Group>
 
-                    <Form.Group as={Row} >
-                        <FormLabel>Пароль ещё раз</FormLabel>
-                        <Form.Control type="password" placeholder="Пароль ещё раз"
-                                      isValid={passAgain.length > 0 && pass === passAgain}
-                                      isInvalid={passAgain.length > 0 && pass !== passAgain}
-                                      value={passAgain}
-                                      required onChange={this.handleInputPasswordAgain} />
+                        <Form.Group as={Row} >
+                            <FormLabel>Пароль ещё раз</FormLabel>
+                            <Form.Control type="password" placeholder="Пароль ещё раз"
+                                          isValid={passAgain.length > 0 && pass === passAgain}
+                                          isInvalid={passAgain.length > 0 && pass !== passAgain}
+                                          value={passAgain}
+                                          required onChange={this.handleInputPasswordAgain} />
 
-                        {pass !== passAgain ?
-                            <FormControl.Feedback type="valid">
-                                повторно введённый пароль не совпадает с введённым первоначально"
-                            </FormControl.Feedback>
-                            : null
-                        }
-                    </Form.Group>
-                    <Form.Group as={Row} >
-                        <ButtonToolbar>
+                            {pass !== passAgain ?
+                                <FormControl.Feedback type="valid">
+                                    повторно введённый пароль не совпадает с введённым первоначально"
+                                </FormControl.Feedback>
+                                : null
+                            }
+                        </Form.Group>
+                        <Form.Group as={Row} >
+                            <ButtonToolbar>
 
-                            <Button variant="link" onClick={
-                                () => {
-                                    appState.modal = "login";
-                                }
-                            }>
-                                Уже зарегестрированы?
-                            </Button>
+                                <Button variant="link" onClick={
+                                    () => {
+                                        appState.modal = "login";
+                                    }
+                                }>
+                                    Уже зарегестрированы?
+                                </Button>
 
-                            <RegisterButton onClick={this.handleClick} />
+                                <RegisterButton onClick={this.handleClick} />
 
-                        </ButtonToolbar>
-                    </Form.Group>
-                </Form>
+                            </ButtonToolbar>
+                        </Form.Group>
+                    </Form>
 
-                { error ?
-                    (
-                        <Alert variant='danger' style={{ marginTop: "20px" }}>
-                            {error}
-                        </Alert>
-                    ) : null
-                }
-            </Jumbotron>
+                    { error ?
+                        (
+                            <Alert variant='danger' style={{ marginTop: "20px" }}>
+                                {error}
+                            </Alert>
+                        ) : null
+                    }
+                </Jumbotron>
+            </Container>
+
         );
     }
 }

@@ -1,1 +1,1 @@
-export const token = "wproducto.token";
+export const tokenKey = "wproducto.token";

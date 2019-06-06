@@ -1,46 +1,29 @@
 import {Product, recycleBin, selectedProductsState} from "../products-caregories";
-import Button from "react-bootstrap/Button";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import React from "react";
-import {Container, Jumbotron, Table} from "react-bootstrap";
+import {Container, Jumbotron,  Table, } from "react-bootstrap";
 import {faMinus, faPlus, faTrash} from "@fortawesome/free-solid-svg-icons";
 import {observer,} from "mobx-react";
 import {Link} from "react-router-dom";
+import {btnProd,} from "./help";
 
-function productRow(p: Product, hasLevel5: boolean, hasInRecycleBin:boolean) {
+function productRow(p: Product, hasLevel5: boolean, hasInRecycleBin: boolean) {
 
     let productInRecycleBin = recycleBin.hasProductID(p.id);
 
     let count = 0;
-    if (hasInRecycleBin){
+    if (hasInRecycleBin) {
         count = recycleBin.count(p.id);
     }
 
 
+    const btn = btnProd(p.id);
+
     return (
         <tr key={p.id}>
-
-            <td style={{padding: '0px'}}>
-                <Button variant="link" onClick={() => recycleBin.addProduct(p)}>
-                    <FontAwesomeIcon icon={faPlus}/>
-                </Button>
-
-                {productInRecycleBin ?
-                    <Button variant="link" onClick={() => recycleBin.reduceProductCount(p.id)}>
-                        <FontAwesomeIcon icon={faMinus}/>
-                    </Button> : null
-                }
-
-
-            </td>
-
-
             <td>
                 {p.level4}
             </td>
-
             {hasLevel5 ? <td> {p.level5} </td> : null}
-
             <td>
                 {p.level6}
             </td>
@@ -51,23 +34,34 @@ function productRow(p: Product, hasLevel5: boolean, hasInRecycleBin:boolean) {
                 {p.name}
             </td>
 
-            { hasInRecycleBin ?
+            {hasInRecycleBin ?
                 <td>
-                    { count === 0 ? null : `${count} штук` }
+                    {count === 0 ? null : `${count} штук`}
                 </td> : null
             }
 
-            { hasInRecycleBin ?
-                <td>
-                    {productInRecycleBin ?
-                        <Button variant="link" onClick={() => recycleBin.removeProductID(p.id)}>
-                            <FontAwesomeIcon icon={faTrash}/>
-                        </Button> : null
-                    }
-                </td> : null
-            }
+            <td style={{padding: '0px', verticalAlign: 'center', textAlign: 'center'}}>
 
+                {btn("добавить единицу товара",
+                    "tooltip-add-product",
+                    faPlus,
+                    () => recycleBin.addProduct(p))}
 
+                {productInRecycleBin ?
+                    btn("удалить единицу товара",
+                        "tooltip-reduce-product",
+                        faMinus,
+                        () => recycleBin.reduceProductCount(p.id))
+                    : null
+                }
+                {productInRecycleBin ?
+                    btn("удалить товар из корзины",
+                        "tooltip-delete-product",
+                        faTrash,
+                        () => recycleBin.removeProductID(p.id))
+                    : null
+                }
+            </td>
         </tr>
     );
 }
@@ -78,21 +72,15 @@ class selectedProducts extends React.Component {
 
     render() {
 
-        if (selectedProductsState.products.length === 0) {
-            return <Welcome/>;
+
+        let products = selectedProductsState.products;
+
+        if (products.length === 0) {
+            return recycleBin.products.length === 0 ? <Welcome/> : null;
         }
 
-        let hasLevel5 = false;
-
-        for (let p of selectedProductsState.products) {
-            if (p.level5.length > 0) {
-                hasLevel5 = true;
-                break;
-            }
-        }
 
         let hasInRecycleBin = false;
-
         for (let p of selectedProductsState.products) {
             if (recycleBin.hasProductID(p.id)) {
                 hasInRecycleBin = true;
@@ -101,16 +89,24 @@ class selectedProducts extends React.Component {
         }
 
 
-        return <div>
-            <h2>Наши товары</h2>
-            <Table bordered >
-                <tbody>
-                {
-                    selectedProductsState.products.map((p) => productRow(p, hasLevel5, hasInRecycleBin))
-                }
-                </tbody>
-            </Table>
-        </div>;
+        let hasLevel5 = false;
+        for (let p of products) {
+            if (p.level5.length > 0) {
+                hasLevel5 = true;
+                break;
+            }
+        }
+
+        return <Table bordered>
+            <caption style={{display: 'table-caption', textAlign: 'left', captionSide: 'top'}}>
+                <h1>Наши товары</h1>
+            </caption>
+            <tbody>
+            {
+                products.map((p) => productRow(p, hasLevel5, hasInRecycleBin))
+            }
+            </tbody>
+        </Table>;
     }
 }
 

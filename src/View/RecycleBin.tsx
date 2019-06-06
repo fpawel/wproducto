@@ -1,23 +1,16 @@
 import {recycleBin, RecycleBinProduct} from "../products-caregories";
-import Button from "react-bootstrap/Button";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import React from "react";
 import {Table} from "react-bootstrap";
 import {faMinus, faPlus, faTrash} from "@fortawesome/free-solid-svg-icons";
 import {observer,} from "mobx-react";
+import {btnProd,} from "./help";
 
 function productRow(p: RecycleBinProduct, hasLevel5: boolean) {
+
+    const btn = btnProd(p.id);
+
     return (
         <tr key={p.id}>
-            <td style={{padding: '0px'}}>
-                <Button variant="link" onClick={() => recycleBin.addProduct(p)}>
-                    <FontAwesomeIcon icon={faPlus}/>
-                </Button>
-                <Button variant="link" onClick={() => recycleBin.reduceProductCount(p.id)}>
-                    <FontAwesomeIcon icon={faMinus}/>
-                </Button>
-            </td>
-
             <td>
                 {p.level4}
             </td>
@@ -34,14 +27,27 @@ function productRow(p: RecycleBinProduct, hasLevel5: boolean) {
                 {p.name}
             </td>
             <td>
-                { `${p.count} штук` }
+                {`${p.count} штук`}
             </td>
 
-            <td style={{padding: '0px'}}>
-                <Button variant="link" onClick={() => recycleBin.removeProductID(p.id)}>
-                    <FontAwesomeIcon icon={faTrash}/>
-                </Button>
+            <td style={{padding: '0px', verticalAlign: 'center', textAlign: 'center'}}>
+                {btn("добавить единицу товара",
+                    "tooltip-add-recycle-bin-product",
+                    faPlus,
+                    () => recycleBin.addProduct(p))}
+
+                {btn("удалить единицу товара",
+                    "tooltip-reduce-recycle-bin-product",
+                    faMinus,
+                    () => recycleBin.reduceProductCount(p.id))}
+
+                {btn("удалить товар из корзины",
+                    "tooltip-delete-recycle-bin-product",
+                    faTrash,
+                    () => recycleBin.removeProductID(p.id))}
+
             </td>
+
 
         </tr>
     );
@@ -61,16 +67,16 @@ class recycleBinView extends React.Component {
                 break;
             }
         }
-        return <div>
-            <h2>Ваша корзина</h2>
-            <Table striped bordered hover responsive>
-                <tbody>
-                {
-                    recycleBin.products.map((p) => productRow(p, hasLevel5))
-                }
-                </tbody>
-            </Table>
-        </div>;
+        return <Table bordered>
+            <caption style={{display: 'table-caption', textAlign: 'left', captionSide: 'top'}}>
+                <h1>Ваша корзина</h1>
+            </caption>
+            <tbody>
+            {
+                recycleBin.products.map((p) => productRow(p, hasLevel5))
+            }
+            </tbody>
+        </Table>;
     }
 }
 

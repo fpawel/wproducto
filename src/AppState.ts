@@ -4,8 +4,6 @@ import {localStorageAppKey, httpHeaderApiKey} from "./Def";
 type Auth = { type: 'guest' } | { type: 'user', name: string, email: string }
 type Modal = 'login' | null;
 
-type RPCMethod = "Auth.Login" | "Auth.Register" | "Auth.Profile";
-
 type ApiResponse = {
     type: "ok",
     result: any,
@@ -119,7 +117,7 @@ class AppState {
         }
 
         let result : ApiResponse;
-        if ( httpMethod==="PUT" && response.status === 201 || response.status === 200) {
+        if ( (httpMethod==="PUT" && response.status === 201) || response.status === 200) {
             result =  {
                 type:"ok",
                 result: await response.json(),

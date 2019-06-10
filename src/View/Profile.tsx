@@ -1,84 +1,13 @@
 import React from "react";
-import * as AppKey from "../Def";
-import {Alert, Button, Col, Container, Form, FormControl, InputGroup, Jumbotron, Row} from 'react-bootstrap';
-import {Link, Redirect} from "react-router-dom";
+
 import {appState} from "../AppState";
 import {observer} from "mobx-react";
+import {Redirect} from "react-router";
+import {Button, Col, Container, Form, FormControl, InputGroup, Jumbotron, Row} from "react-bootstrap";
 
 const viewDescription = (text: string) =>
     (<label style={{fontWeight: "bold"}}>{text}</label>)
 ;
-
-const viewExn = (exn:any) =>
-    <Alert variant='danger' style={{marginTop: "20px"}}>
-        <h2>Что-то пошло не так.</h2>
-        <p>{exn.text}</p>
-        <p>Попробуйте <Link to="/profile"> войти в личный кабинет </Link> ещё раз.
-        </p>
-    </Alert>;
-
-const viewResult = (user: {name:string, email:string} ) =>
-    <Jumbotron>
-        <h1
-            style={{
-                fontSize: "34px",
-                fontWeight: "bold",
-            }}
-
-        >{user.name} </h1>
-        <hr/>
-
-        {viewDescription('Сменить адрес электронной почты')}
-
-        <InputGroup className="mb-3">
-            <FormControl placeholder="Email" type="email" value={user.email} onChange={() => {}} />
-            <InputGroup.Append>
-                <Button variant="outline-secondary">Отмена</Button>
-                <Button variant="outline-secondary">Сохранить</Button>
-            </InputGroup.Append>
-        </InputGroup>
-
-        {viewDescription('Сменить пароль')}
-
-        <Form>
-            <Form.Group as={Row}>
-                <Col sm={3}>
-                    <Form.Label>
-                        Новый пароль
-                    </Form.Label>
-                </Col>
-                <Col>
-                    <Form.Control type="password" placeholder="новый пароль"/>
-                </Col>
-            </Form.Group>
-
-            <Form.Group as={Row}>
-                <Col sm={3}>
-                    <Form.Label>
-                        Подтверждение нового пароля
-                    </Form.Label>
-                </Col>
-                <Col>
-                    <Form.Control type="password" placeholder="новый пароль ещё раз"/>
-                </Col>
-            </Form.Group>
-
-            <Form.Group as={Row}>
-                <Col sm={3}>
-                    <Form.Label>
-                        Старый пароль
-                    </Form.Label>
-                </Col>
-                <Col>
-                    <Form.Control type="password" placeholder="старый пароль"/>
-                </Col>
-            </Form.Group>
-        </Form>
-
-
-    </Jumbotron>;
-
-
 
 @observer
 class ProfileDecorated extends React.Component<{}, {email:string}> {

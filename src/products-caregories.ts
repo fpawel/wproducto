@@ -1,8 +1,8 @@
-import {action, observable,} from 'mobx'
-const recycleBinProductsKey = "wproducto.recycleBinProducts";
+import {action, observable, computed} from 'mobx'
+const shoppingCartProductsKey = "wproducto.shoppingCartProducts";
 
 class SelectedProductsState {
-    @observable products: Product[] = restoreRecycleBinProducts();
+    @observable products: Product[] = [];
 
     @action
     setSelectedProducts(anyNode: any) {
@@ -15,10 +15,10 @@ class SelectedProductsState {
     }
 }
 
-export type RecycleBinProduct = Product & {count:number};
+export type ShoppingCartProduct = Product & {count:number};
 
-class RecycleBin {
-    @observable products: RecycleBinProduct[] = restoreRecycleBinProducts();
+class ShoppingCart {
+    @observable products: ShoppingCartProduct[] = restoreShoppingCartProducts();
 
     hasProductID(productID: number){
         for (let p of this.products) {
@@ -28,8 +28,15 @@ class RecycleBin {
         }
         return false;
     }
+    @computed get count(){
+        let result = 0;
+        for (let p of this.products) {
+            result += p.count;
+        }
+        return result;
+    }
 
-    count(productID: number){
+    productCount(productID: number){
         for (let p of this.products) {
             if(p.id === productID){
                 return p.count;
@@ -76,20 +83,20 @@ class RecycleBin {
     }
 
     store() {
-        localStorage.setItem(recycleBinProductsKey, JSON.stringify(this.products));
+        localStorage.setItem(shoppingCartProductsKey, JSON.stringify(this.products));
     }
 }
 
 
-function restoreRecycleBinProducts() {
-    let s = localStorage.getItem(recycleBinProductsKey);
+function restoreShoppingCartProducts() {
+    let s = localStorage.getItem(shoppingCartProductsKey);
     if (s) {
-        return <RecycleBinProduct[]>JSON.parse(s);
+        return <ShoppingCartProduct[]>JSON.parse(s);
     }
     return [];
 }
 
-export const recycleBin = new RecycleBin();
+export const shoppingCart = new ShoppingCart();
 
 export const selectedProductsState = new SelectedProductsState();
 

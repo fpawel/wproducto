@@ -16,7 +16,8 @@ import {productsCategoriesTree, selectedProductsState} from "./products-caregori
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import {SelectedProducts} from "./View/SelectedProducts";
-import {RecycleBin} from "./View/RecycleBin";
+import {ShoppingCart} from "./View/ShoppingCart";
+import {LoginModal} from "./View/LoginModal";
 
 class App extends React.Component {
     async componentDidMount() {
@@ -27,17 +28,19 @@ class App extends React.Component {
     render() {
         return (
             <Router>
-                <Container>
-                    <AppNavBar/>
-                </Container>
-                <Switch>
-                    <Route exact path="/" component={ProductsCategories}/>
-                    <Route path="/login" component={Login}/>
-                    <Route path="/logout" component={Logout}/>
-                    <Route path="/register" component={Register}/>
-                    <Route path="/profile" component={Profile}/>
-                    <Route component={NoMatch}/>
-                </Switch>
+                <LoginModal />
+                <AppNavBar />
+                <div >
+                    <Switch >
+                        <Route exact path="/" component={ProductsCategories}/>
+                        <Route path="/login" component={Login}/>
+                        <Route path="/logout" component={Logout}/>
+                        <Route path="/register" component={Register}/>
+                        <Route path="/profile" component={Profile}/>
+                        <Route path="/shopping-cart" component={ShoppingCart}/>
+                        <Route component={NoMatch}/>
+                    </Switch>
+                </div>
                 <ConnectionError/>
             </Router>);
     }
@@ -60,7 +63,7 @@ function ProductsCategories() {
                      lg={8}
                      md={8}
                      xs={8}>
-                    <RecycleBin />
+
                     <SelectedProducts />
                 </Col>
             </Row>

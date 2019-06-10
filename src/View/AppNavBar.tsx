@@ -1,30 +1,25 @@
 import {observer} from "mobx-react";
 import React from "react";
-import {Container, Modal, Nav, Navbar, NavDropdown } from "react-bootstrap";
 import {appState} from "../AppState";
+import {shoppingCart} from "../products-caregories";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faUser} from "@fortawesome/free-solid-svg-icons";
+import {faUser, faShoppingCart} from "@fortawesome/free-solid-svg-icons";
 import {withRouter} from "react-router";
-import {LoginModal} from './LoginModal';
+import {Badge, Nav, Navbar, NavDropdown} from "react-bootstrap";
 
 export const AppNavBar = withRouter(props => {
     const {location} = props;
-    return (
-        <div>
-            <LoginModal />
-            <Navbar bg="primary" variant="dark">
-                <Navbar.Brand href="#/">Producto</Navbar.Brand>
-                <Nav className="mr-auto" activeKey={'#' + location.pathname}>
-                    {/*<Nav.Link href="#/login" activeclassname="active" eventKey="#/login" >Вход</Nav.Link>*/}
-                    {/*<Nav.Link href="#/register" activeclassname="active" eventKey="#/register" >Регистрация</Nav.Link>*/}
-
-                </Nav>
-                <Nav activeKey={'#' + location.pathname}>
-                    <UserMenu/>
-                </Nav>
-            </Navbar>
-        </div>
-    );
+    return <Navbar bg="primary" variant="dark" sticky="top" fixed="top" >
+        <Navbar.Brand href="#/">Producto</Navbar.Brand>
+        <Nav className="mr-auto" activeKey={'#' + location.pathname}>
+            {/*<Nav.Link href="#/login" activeclassname="active" eventKey="#/login" >Вход</Nav.Link>*/}
+            {/*<Nav.Link href="#/register" activeclassname="active" eventKey="#/register" >Регистрация</Nav.Link>*/}
+        </Nav>
+        <Nav activeKey={'#' + location.pathname} style={{marginRight:"10px"}}>
+            <ShoppingCartNav />
+            <UserMenu/>
+        </Nav>
+    </Navbar>;
 });
 
 const viewDropDownUserMenuItem = (name?:string) => <span>
@@ -33,7 +28,7 @@ const viewDropDownUserMenuItem = (name?:string) => <span>
     </span>;
 
 const userMenu = (name: string) => {
-    return <NavDropdown id="basic-nav-dropdown" title={viewDropDownUserMenuItem(name)} >
+    return <NavDropdown id="basic-nav-dropdown" alignRight title={viewDropDownUserMenuItem(name)}  >
         <NavDropdown.Item href="#/profile">
             Личный кабинет
         </NavDropdown.Item>
@@ -44,7 +39,7 @@ const userMenu = (name: string) => {
 };
 
 
-const guestMenu = <NavDropdown id="basic-nav-dropdown" title={ viewDropDownUserMenuItem()} >
+const guestMenu = <NavDropdown id="dropdown-menu-align-right" alignRight title={ viewDropDownUserMenuItem()} >
     <NavDropdown.Item onClick = {() => appState.setModal('login')} >
         Вход
     </NavDropdown.Item>
@@ -62,3 +57,16 @@ class UserMenu extends React.Component {
     }
 }
 
+@observer
+class ShoppingCartNav extends React.Component {
+    render() {
+        if (shoppingCart.count === 0)
+            return null;
+        return <Nav className="mr-auto">
+            <Nav.Link href="#shopping-cart">
+                <FontAwesomeIcon icon={faShoppingCart} style={{marginRight: "5px"}}/>
+                <Badge pill variant="secondary">{shoppingCart.count}</Badge>
+            </Nav.Link>
+        </Nav>;
+    }
+}

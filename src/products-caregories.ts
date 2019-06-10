@@ -1,6 +1,4 @@
 import {action, observable,} from 'mobx'
-import './AppKey.ts'
-
 const recycleBinProductsKey = "wproducto.recycleBinProducts";
 
 class SelectedProductsState {

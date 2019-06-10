@@ -1,5 +1,5 @@
 import React from "react";
-import * as AppKey from "../AppKey";
+import * as AppKey from "../Def";
 import {Button, ButtonProps, Form, Spinner, Row, Alert, Container, Jumbotron,  FormLabel, OverlayTrigger } from 'react-bootstrap';
 import { Link, Redirect } from "react-router-dom";
 import {appState} from "../AppState"
@@ -7,7 +7,7 @@ import {observer} from "mobx-react";
 
 interface State {
     name: string;
-    pass: string;
+    password: string;
     error?: string,
     redirect?: string,
 }
@@ -19,9 +19,9 @@ class LoginButton extends React.Component< {onClick: ButtonOnClickHandler}, {}>{
     render(){
         return <Button variant="primary" type="submit"
                        className="float-right" onClick={this.props.onClick}
-                       disabled={appState.rpcRequest === 'Auth.Login'} >
+                       disabled={appState.apiRequestPerforming} >
 
-            {appState.rpcRequest === 'Auth.Login' ?
+            {appState.apiRequestPerforming ?
                 <Spinner
                     as="span"
                     animation="grow"
@@ -39,7 +39,7 @@ export default class Login extends React.Component<{}, State> {
         super(props);
         this.state = {
             name: "",
-            pass: "",
+            password: "",
         };
         this.handleClick = this.handleClick.bind(this);
         this.handleInputName = this.handleInputName.bind(this);
@@ -51,7 +51,7 @@ export default class Login extends React.Component<{}, State> {
     }
 
     handleInputPassword(evt: any) {
-        this.setState({ pass: evt.target.value });
+        this.setState({ password: evt.target.value });
     }
 
 
@@ -60,16 +60,13 @@ export default class Login extends React.Component<{}, State> {
 
         this.setState({ error:undefined });
 
-        const response = await appState.login(this.state);
-        if (response.type === "result") {
+        if (await appState.login(this.state)) {
+            await appState.getUser();
             this.setState({
                 redirect: "/profile",
             });
-            return;
         }
-        this.setState({
-            error: response.error.message,
-        });
+        this.setState({ error: "что-то пошло не так", });
     }
 
     render() {
@@ -107,7 +104,7 @@ export default class Login extends React.Component<{}, State> {
                         <Form.Group as={Row} >
                             <FormLabel>Пароль</FormLabel>
                             <Form.Control type="password" placeholder="Пароль"
-                                          value={this.state.pass}
+                                          value={this.state.password}
                                           onChange={this.handleInputPassword} />
                         </Form.Group>
 

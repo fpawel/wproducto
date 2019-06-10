@@ -1,14 +1,14 @@
 import React from "react";
-import {HashRouter as Router, Link, Redirect, Route, Switch,} from "react-router-dom";
+import {HashRouter as Router, Redirect, Route, Switch,} from "react-router-dom";
 import "./App.css";
 import Login from "./View/Login";
 import Register from "./View/Register";
 import {Profile} from "./View/Profile";
 import {appState} from "./AppState";
 import {observer} from "mobx-react";
-import {Alert, Container, Jumbotron, Table} from "react-bootstrap";
+import {Alert, Container, Jumbotron, } from "react-bootstrap";
 
-import * as AppKey from "./AppKey";
+import {localStorageAppKey} from "./Def";
 import {AppNavBar} from "./View/AppNavBar";
 
 import {TreeView} from "./components/TreeView";
@@ -20,7 +20,7 @@ import {RecycleBin} from "./View/RecycleBin";
 
 class App extends React.Component {
     async componentDidMount() {
-        await appState.fetchProfile();
+        await appState.getUser();
         console.log(process.env);
     }
 
@@ -105,7 +105,7 @@ class ConnectionError extends React.Component {
 
 
 function Logout() {
-    localStorage.removeItem(AppKey.tokenKey);
+    localStorage.removeItem(localStorageAppKey);
     appState.setAuth({type: 'guest'});
     return (
         <Redirect to={"/#"}/>

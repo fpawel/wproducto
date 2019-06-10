@@ -1,5 +1,5 @@
 import React from "react";
-import * as AppKey from "../AppKey";
+import * as AppKey from "../Def";
 import {Alert, Button, Col, Container, Form, FormControl, InputGroup, Jumbotron, Row} from 'react-bootstrap';
 import {Link, Redirect} from "react-router-dom";
 import {appState} from "../AppState";

@@ -7,7 +7,7 @@ import './LoginModal.css'
 
 interface State {
     name: string;
-    pass: string;
+    password: string;
     error?: string,
 }
 
@@ -20,7 +20,7 @@ class LoginModalObserver extends React.Component<{}, State> {
         super(props);
         this.state = {
             name: "",
-            pass: "",
+            password: "",
         };
         this.handleClick = this.handleClick.bind(this);
         this.handleInputName = this.handleInputName.bind(this);
@@ -33,7 +33,7 @@ class LoginModalObserver extends React.Component<{}, State> {
     }
 
     handleInputPassword(evt: any) {
-        this.setState({pass: evt.target.value});
+        this.setState({password: evt.target.value});
     }
 
     handleResetError() {
@@ -45,24 +45,20 @@ class LoginModalObserver extends React.Component<{}, State> {
 
         this.setState({error: undefined});
         try {
-            const response = await appState.login(this.state);
-            if (response.type === "error") {
-                this.setState({
-                    error: response.error.message,
-                });
-            } else {
+            const r = await appState.login(this.state);
+            if (r.type === "ok") {
+                await appState.getUser();
                 appState.setModal(null);
+                return
             }
+            this.setState({ error: `${r.error.code}: ${r.error.message}` });
         } catch (e) {
-            this.setState({
-                error: 'Нет связи',
-            });
-
+            this.setState({ error: 'Нет связи', });
         }
     }
 
     render() {
-        let {error, name, pass,} = this.state;
+        let {error, name, password,} = this.state;
 
         return (
             <Modal dialogClassName='login-modal-dialog' aria-labelledby="contained-modal-title-vcenter"
@@ -93,7 +89,7 @@ class LoginModalObserver extends React.Component<{}, State> {
                     <InputGroup size="sm">
                         <FormControl aria-label="Large" aria-describedby="inputGroup-sizing-sm"
                                      type="password" placeholder="Пароль"
-                                     value={pass}
+                                     value={password}
                                      onChange={this.handleInputPassword}/>
                     </InputGroup>
 
@@ -111,13 +107,13 @@ class LoginModalObserver extends React.Component<{}, State> {
                 <Modal.Footer>
                     <div>
                         <Button variant="primary" type="submit"
-                                disabled={appState.rpcRequest === 'Auth.Login'}
+                                disabled={appState.apiRequestPerforming}
                                 className="float-right"
                                 onClick={this.handleClick}
                         >
                             Вход
 
-                            {appState.rpcRequest === 'Auth.Login' ?
+                            {appState.apiRequestPerforming ?
                                 <Spinner
                                     as="span"
                                     animation="grow"

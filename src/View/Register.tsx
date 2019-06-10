@@ -1,5 +1,5 @@
 import React from "react";
-import * as AppKey from "../AppKey";
+import * as AppKey from "../Def";
 import {
     Button, Form, Spinner, Row, Alert, Container, FormGroup, FormLabel, FormControl, Jumbotron, ButtonToolbar
 } from 'react-bootstrap';
@@ -22,7 +22,7 @@ class RegisterButton extends React.Component<{onClick: () => void}, {}>{
     render(){
         return <Button variant="primary" type="submit"
                        className="float-right" onClick={this.props.onClick}
-                       disabled={appState.rpcRequest==='Auth.Register'}>
+                       disabled={appState.apiRequestPerforming}>
             Регистрация
         </Button>;
     }
@@ -67,15 +67,15 @@ export default class Register extends React.Component<{}, State> {
 
     async handleClick() {
         this.setState({ error:undefined });
-
-        let response = await appState.register(this.state);
-        if (response.type === "result") {
+        let r = await appState.putUser(this.state);
+        if (r.type === "ok") {
+            await appState.getUser();
             this.setState({
                 redirect: "/profile",
             });
             return;
         }
-        this.setError(response.error.message);
+        this.setError(`${r.error.code}: ${r.error.message}`);
     }
 
     render() {
@@ -173,7 +173,7 @@ export default class Register extends React.Component<{}, State> {
     }
 }
 
-function validateEmail(email: string) {
-    var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return re.test(email);
-}
+// function validateEmail(email: string) {
+//     var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+//     return re.test(email);
+// }

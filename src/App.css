@@ -31,3 +31,8 @@
     transform: rotate(360deg);
   }
 }
+
+.view-product-table td{
+  vertical-align: center;
+  text-align: center;
+}

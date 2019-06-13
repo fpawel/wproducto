@@ -1,5 +1,5 @@
 import {action, observable} from 'mobx'
-import {localStorageAppKey, httpHeaderApiKey} from "./Def";
+import { getApiKeyValue, setApiKeyValue} from "./Def";
 
 type Auth = { type: 'guest' } | { type: 'user', name: string, email: string }
 type Modal = 'login' | null;
@@ -97,10 +97,12 @@ class AppState {
             url = '';
         url += "/api" + apiPath;
 
+        const httpHeaderApiKey = "API-key";
+
         let headers = new Headers();
         headers.append("Accept", "application/json");
         headers.append("Content-Type", "application/json");
-        let apiKey = localStorage.getItem(localStorageAppKey);
+        let apiKey = getApiKeyValue();
         if (apiKey){
             headers.append(httpHeaderApiKey, apiKey);
         }
@@ -113,7 +115,7 @@ class AppState {
         let response = await fetch(url, init);
         let newApiKey = response.headers.get(httpHeaderApiKey);
         if (response.ok && apiKey && newApiKey) {
-            localStorage.setItem(localStorageAppKey, newApiKey);
+            setApiKeyValue(newApiKey);
         }
 
         let result : ApiResponse;
@@ -123,7 +125,7 @@ class AppState {
                 result: await response.json(),
             };
             if (result.result.apiKey){
-                localStorage.setItem(localStorageAppKey, result.result.apiKey);
+                setApiKeyValue(result.result.apiKey);
             }
             return result;
         }

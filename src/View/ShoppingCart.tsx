@@ -6,42 +6,32 @@ import {observer,} from "mobx-react";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import Button from "react-bootstrap/Button";
 import {Redirect} from "react-router";
+import "../App.css";
 
 
-function productRow(p: ShoppingCartProduct, hasLevel5: boolean) {
+function productRow(p: ShoppingCartProduct) {
 
 
     return (
         <tr key={p.id}>
-            <td>
-                {p.level4}
-            </td>
-
-            {hasLevel5 ? <td> {p.level5} </td> : null}
-
-            <td>
-                {p.level6}
-            </td>
-            <td>
-                {p.level7}
-            </td>
-            <td>
-                {p.name}
-            </td>
-            <td style={{display: "flex", verticalAlign:"center", textAlign:"center"}}>
+            <td style={{width:"40px"}}>
                 <Button variant="primary" size="sm" onClick={() => shoppingCart.addProduct(p)}>
                     <FontAwesomeIcon icon={faPlus}/>
                 </Button>
-
-                <span style={{width: '30px'}}>
-                    {p.count}
-                </span>
-
-
+            </td>
+            <td>
+                {p.count}
+            </td>
+            <td style={{width:"40px"}}>
                 <Button variant="primary" size="sm" onClick={() => shoppingCart.reduceProductCount(p.id)}>
                     <FontAwesomeIcon icon={faMinus}/>
                 </Button>
+            </td>
+            <td style={{textAlign:'left', width:"100%"}}>
+                {p.name}
+            </td>
 
+            <td style={{width:"40px"}}>
                 <Button variant="primary" size="sm" onClick={() => shoppingCart.removeProductID(p.id)}
                         style={{marginLeft:'5px'}}>
                     <FontAwesomeIcon icon={faTrash}/>
@@ -59,21 +49,15 @@ class shoppingCartView extends React.Component {
         if (shoppingCart.count === 0) {
             return <Redirect to="/"/>;
         }
-        let hasLevel5 = false;
-        for (let i = 0; i < shoppingCart.products.length; i++) {
-            if (shoppingCart.products[i].level5.length > 0) {
-                hasLevel5 = true;
-                break;
-            }
-        }
+
         return <Container>
-            <Table size="sm">
+            <Table size="sm" className="view-product-table">
                 <caption style={{display: 'table-caption', textAlign: 'left', captionSide: 'top'}}>
                     <h1>Ваша корзина</h1>
                 </caption>
                 <tbody>
                 {
-                    shoppingCart.products.map((p) => productRow(p, hasLevel5))
+                    shoppingCart.products.map(productRow)
                 }
                 </tbody>
             </Table>

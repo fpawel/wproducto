@@ -7,22 +7,27 @@ import {Profile} from "./View/Profile";
 import {appState} from "./AppState";
 import {observer} from "mobx-react";
 import {Alert, Container, Jumbotron, } from "react-bootstrap";
-
-import {localStorageAppKey} from "./Def";
 import {AppNavBar} from "./View/AppNavBar";
-
+import {clearApiKeyValue} from "./Def";
 import {TreeView} from "./components/TreeView";
-import {productsCategoriesTree, selectedProductsState} from "./products-caregories";
+import {catalogue, selectedProductsState, CatalogueNode} from "./products-caregories";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import {SelectedProducts} from "./View/SelectedProducts";
 import {ShoppingCart} from "./View/ShoppingCart";
 import {LoginModal} from "./View/LoginModal";
+import {getApiKeyValue} from "./Def"
 
 class App extends React.Component {
     async componentDidMount() {
-        await appState.getUser();
         console.log(process.env);
+        if(getApiKeyValue()){
+            await appState.getUser();
+        }
+        let x = await appState.apiGetResponse("GET", "/catalogue", null);
+        if (x.type === 'ok'){
+            catalogue.setNodes(x.result);
+        }
     }
 
     render() {
@@ -46,17 +51,29 @@ class App extends React.Component {
     }
 }
 
-function ProductsCategories() {
-    return (
-        <Container>
+
+async function onNodeChanged(x:any){
+    if (x && x.tags){
+        let uri = "/products?tags=" + encodeURI(x.tags.join());
+        let r = await appState.apiGetResponse("GET", uri, null);
+        if (r.type === "ok" ) {
+            selectedProductsState.setSelectedProducts(r.result);
+        }
+    }
+}
+
+@observer
+class ProductsCategories extends React.Component {
+    render() {
+        return <Container>
             <Row>
                 <Col style={{verticalAlign: "top", paddingTop: "5px", paddingRight: "5px"}}
                      xl={4}
                      lg={4}
                      md={4}
                      xs={4}>
-                    <TreeView data={productsCategoriesTree}
-                              onChangeSelectedNode={(node) => selectedProductsState.setSelectedProducts(node)}/>
+                    <TreeView data={catalogue.nodes}
+                              onChangeSelectedNode={onNodeChanged}/>
                 </Col>
                 <Col style={{verticalAlign: "top", paddingTop: "5px"}}
                      xl={8}
@@ -67,8 +84,9 @@ function ProductsCategories() {
                     <SelectedProducts />
                 </Col>
             </Row>
-        </Container>
-    );
+        </Container>;
+    }
+
 }
 
 @observer
@@ -108,7 +126,7 @@ class ConnectionError extends React.Component {
 
 
 function Logout() {
-    localStorage.removeItem(localStorageAppKey);
+    clearApiKeyValue();
     appState.setAuth({type: 'guest'});
     return (
         <Redirect to={"/#"}/>
